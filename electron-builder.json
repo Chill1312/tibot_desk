@@ -2,7 +2,7 @@
   "appId": "com.reunion.tibot",
   "productName": "Ti'Bot",
   "directories": {
-    "output": "release",
+    "output": "build-output",
     "buildResources": "assets"
   },
   "files": [

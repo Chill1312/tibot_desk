@@ -48,7 +48,8 @@ contextBridge.exposeInMainWorld('electron', {
       'start-update',
       'install-update',
       'check-for-updates',
-      'mistral:chat'
+      'mistral:chat',
+      'window-control'
     ];
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);

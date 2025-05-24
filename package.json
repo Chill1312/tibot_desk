@@ -1,7 +1,11 @@
 {
   "name": "tibot",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Ti'Bot - Premier IA Kréol La Rénion",
+  "author": {
+    "name": "Ti'Bot Team",
+    "email": "contact@tibot.re"
+  },
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"electron .\"",
