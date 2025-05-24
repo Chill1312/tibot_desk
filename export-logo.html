@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Export Logo</title>
+</head>
+<body>
+    <canvas id="canvas" width="256" height="256"></canvas>
+    <script>
+        // Copie le SVG ici et convertis en PNG
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Dessiner le logo (version simplifiée)
+        ctx.fillStyle = '#0891B2';
+        ctx.beginPath();
+        ctx.arc(128, 128, 100, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#1F2937';
+        ctx.fillRect(88, 100, 80, 90);
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Ti\'Bot', 128, 220);
+        
+        // Télécharger
+        canvas.toBlob(blob => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'tibot-logo.png';
+            a.click();
+        });
+    </script>
+</body>
+</html>

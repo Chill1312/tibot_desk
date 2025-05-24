@@ -1,0 +1,41 @@
+{
+  "appId": "com.reunion.tibot",
+  "productName": "Ti'Bot",
+  "directories": {
+    "output": "release",
+    "buildResources": "assets"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "public/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "assets/",
+      "to": "assets",
+      "filter": ["**/*"]
+    }
+  ],
+  "publish": {
+    "provider": "github",
+    "owner": "TiBot-Reunion",
+    "repo": "tibot-desktop",
+    "private": false,
+    "releaseType": "release"
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "assets/icon.ico",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "assets/icon.ico",
+    "uninstallerIcon": "assets/icon.ico",
+    "installerHeaderIcon": "assets/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  }
+}
