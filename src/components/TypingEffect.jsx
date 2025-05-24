@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+// Événement personnalisé pour notifier les changements de contenu pendant la frappe
+const typingUpdateEvent = new CustomEvent('typingUpdate');
+
 const TypingEffect = ({ content, className, isNew = false }) => {
   const [displayedContent, setDisplayedContent] = useState('');
   const [isComplete, setIsComplete] = useState(!isNew);
@@ -23,6 +26,10 @@ const TypingEffect = ({ content, className, isNew = false }) => {
       if (currentLength <= content.length) {
         setDisplayedContent(content.slice(0, currentLength));
         currentLength++;
+        
+        // Émettre un événement pour signaler que le contenu a changé
+        // Cela permettra de déclencher le défilement automatique
+        document.dispatchEvent(typingUpdateEvent);
         
         if (currentLength <= content.length) {
           setTimeout(typeText, typingSpeed);

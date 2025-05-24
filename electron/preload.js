@@ -4,7 +4,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('process', {
   env: {
     HUGGING_FACE_TOKEN: process.env.HUGGING_FACE_TOKEN,
-    MISTRAL_API_KEY: process.env.MISTRAL_API_KEY
+    MISTRAL_API_KEY: process.env.MISTRAL_API_KEY,
+    STABLE_DIFFUSION_API_KEY: process.env.STABLE_DIFFUSION_API_KEY
   }
 });
 
@@ -48,7 +49,9 @@ contextBridge.exposeInMainWorld('electron', {
       'start-update',
       'install-update',
       'check-for-updates',
+      'code:generate',
       'mistral:chat',
+      'stableDiffusion:generateImage',
       'window-control'
     ];
     if (validChannels.includes(channel)) {
@@ -59,5 +62,19 @@ contextBridge.exposeInMainWorld('electron', {
   // Ajouter les fonctions Mistral
   mistral: {
     chat: (message, language) => ipcRenderer.invoke('mistral:chat', { message, language })
+  },
+  
+  // Ajouter les fonctions Stable Diffusion
+  stableDiffusion: {
+    generateImage(prompt, style) {
+      return ipcRenderer.invoke('stableDiffusion:generateImage', { prompt, style });
+    }
+  },
+  
+  // Ajouter les fonctions Code
+  code: {
+    generate(prompt, language, level) {
+      return ipcRenderer.invoke('code:generate', { prompt, language, level });
+    }
   }
 });

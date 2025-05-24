@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Image, Code, Settings, Menu, X, Send, Sparkles, User, Bot, Home, History, Plus, Moon, Sun, Download, Copy, Palette, Wand2, RefreshCw, Check, Terminal, Globe, Cpu, Save, Bell, Database, Type, Shield, HelpCircle, LogOut, Trash2 } from 'lucide-react';
+import { MessageCircle, Image, Code, Settings, Menu, X, Send, Sparkles, User, Bot, Home, History, Plus, Moon, Sun, Download, Copy, Palette, Wand2, RefreshCw, Check, Terminal, Globe, Cpu, Save, Bell, Database, Type, Shield, HelpCircle, LogOut, Trash2, UserCircle } from 'lucide-react';
+import PersonalizationPanel from './components/PersonalizationPanel';
 import logoImage from '../assets/logo.png';
 import UpdateNotification from './components/UpdateNotification';
 import TypingEffect from './components/TypingEffect';
@@ -32,6 +33,15 @@ const TiBotInterface = () => {
   const [generatedCode, setGeneratedCode] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  // États pour la personnalisation
+  const [showPersonalization, setShowPersonalization] = useState(false);
+  const [personalization, setPersonalization] = useState({});
+  // Référence au conteneur de messages pour le défilement automatique
+  const messagesContainerRef = useRef(null);
+  
+  // Référence pour stocker la position de défilement de chaque conversation
+  const scrollPositionsRef = useRef({});
+  
   const [welcomeTitle] = useState(() => {
     const titles = [
       "Bienvenue dans Ti'Bot ! Posez-moi une question en créole ou en français.",
@@ -90,8 +100,24 @@ const TiBotInterface = () => {
         const emptyConversation = loadedConversations.find(conv => !conv.messages || conv.messages.length === 0);
         if (emptyConversation) {
           setCurrentConversationId(emptyConversation.id);
+          setMessages([]);
         } else {
-          handleNewChat();
+          // Charger la première conversation avec des messages
+          const firstConversation = loadedConversations.find(conv => conv.messages && conv.messages.length > 0);
+          if (firstConversation) {
+            setCurrentConversationId(firstConversation.id);
+            
+            // S'assurer que tous les messages chargés initialement ont isNew = false
+            const messagesWithoutTypingEffect = (firstConversation.messages || []).map(message => ({
+              ...message,
+              isNew: false // Forcer isNew à false pour tous les messages chargés initialement
+            }));
+            
+            setMessages(messagesWithoutTypingEffect);
+            console.log('Conversation initiale chargée avec messages sans effet de frappe:', messagesWithoutTypingEffect);
+          } else {
+            handleNewChat();
+          }
         }
       }
       
@@ -132,13 +158,101 @@ const TiBotInterface = () => {
     console.log('ID historique image actuel:', currentImageHistoryId);
     console.log('Historique des images actuel:', imageHistory);
   }, [activeMode, currentImageHistoryId, imageHistory]);
+  
+  // Charger les informations de personnalisation depuis le localStorage
+  useEffect(() => {
+    const savedPersonalization = localStorage.getItem('tibot-personalization');
+    if (savedPersonalization) {
+      try {
+        const parsedPersonalization = JSON.parse(savedPersonalization);
+        setPersonalization(parsedPersonalization);
+        console.log('Informations de personnalisation chargées:', parsedPersonalization);
+      } catch (error) {
+        console.error('Erreur lors du chargement des informations de personnalisation:', error);
+      }
+    }
+  }, []);
+  
+  // Effet pour gérer le défilement automatique vers le bas lorsque de nouveaux messages sont ajoutés
+  useEffect(() => {
+    if (messagesContainerRef.current && messages.length > 0) {
+      // Vérifier si nous avons une position de défilement sauvegardée pour cette conversation
+      if (scrollPositionsRef.current[currentConversationId]) {
+        // Restaurer la position de défilement sauvegardée
+        messagesContainerRef.current.scrollTop = scrollPositionsRef.current[currentConversationId];
+        console.log(`Position de défilement restaurée pour la conversation ${currentConversationId}:`, scrollPositionsRef.current[currentConversationId]);
+      } else {
+        // Si c'est une nouvelle conversation ou si nous n'avons pas de position sauvegardée,
+        // défiler jusqu'en bas
+        const scrollToBottom = () => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          }
+        };
+        scrollToBottom();
+      }
+    }
+  }, [messages, currentConversationId]);
+  
+  // Effet pour défiler automatiquement vers le bas lorsque de nouveaux messages sont ajoutés
+  useEffect(() => {
+    // Si le dernier message est nouveau (vient d'être ajouté), défiler vers le bas
+    if (messages.length > 0 && messages[messages.length - 1].isNew) {
+      const scrollToBottom = () => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      };
+      
+      // Défiler immédiatement
+      scrollToBottom();
+      
+      // Défiler à nouveau après un court délai pour s'assurer que tout le contenu est rendu
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [messages]);
+  
+  // Écouteur d'événement pour le défilement automatique pendant que Ti'Bot écrit
+  useEffect(() => {
+    // Fonction pour défiler vers le bas pendant la frappe
+    const handleTypingUpdate = () => {
+      if (messagesContainerRef.current && activeMode === 'chat') {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    };
+    
+    // Ajouter l'écouteur d'événement
+    document.addEventListener('typingUpdate', handleTypingUpdate);
+    
+    // Nettoyer l'écouteur d'événement lors du démontage
+    return () => {
+      document.removeEventListener('typingUpdate', handleTypingUpdate);
+    };
+  }, [activeMode]);
 
   // Charger une conversation existante
   const handleLoadConversation = (conversationId) => {
+    // Sauvegarder la position de défilement de la conversation actuelle avant de changer
+    if (currentConversationId && messagesContainerRef.current) {
+      scrollPositionsRef.current[currentConversationId] = messagesContainerRef.current.scrollTop;
+      console.log(`Position de défilement sauvegardée pour la conversation ${currentConversationId}:`, scrollPositionsRef.current[currentConversationId]);
+    }
+    
     const conversation = conversations.find(conv => conv.id === conversationId);
     if (conversation) {
       setCurrentConversationId(conversationId);
-      setMessages(conversation.messages || []);
+      
+      // S'assurer que tous les messages chargés depuis l'historique ont isNew = false
+      // pour éviter que l'effet de frappe ne s'applique à chaque rechargement
+      const messagesWithoutTypingEffect = (conversation.messages || []).map(message => ({
+        ...message,
+        isNew: false // Forcer isNew à false pour tous les messages chargés depuis l'historique
+      }));
+      
+      setMessages(messagesWithoutTypingEffect);
+      console.log('Conversation chargée avec messages sans effet de frappe:', messagesWithoutTypingEffect);
+      
+      // La position de défilement sera restaurée dans un useEffect après le rendu
     }
   };
   
@@ -380,16 +494,31 @@ const TiBotInterface = () => {
     }
   };
 
+  // Fonction pour réinitialiser l'onboarding
+  const resetOnboarding = () => {
+    localStorage.removeItem('tibot-onboarding-completed');
+    setShowOnboarding(true);
+    setOnboardingStep(0);
+    console.log('Onboarding réinitialisé');
+  };
+  
+  // Fonction pour sauvegarder les informations de personnalisation
+  const handleSavePersonalization = (newPersonalization) => {
+    setPersonalization(newPersonalization);
+    localStorage.setItem('tibot-personalization', JSON.stringify(newPersonalization));
+    console.log('Informations de personnalisation sauvegardées:', newPersonalization);
+  };
+  
   const handleSkipOnboarding = () => {
     setShowOnboarding(false);
     localStorage.setItem('tibot-onboarding-completed', 'true');
   };
 
   useEffect(() => {
-    const onboardingCompleted = localStorage.getItem('tibot-onboarding-completed');
-    if (onboardingCompleted) {
-      setShowOnboarding(false);
-    }
+    // Forcer la réinitialisation de l'onboarding pour le test
+    localStorage.removeItem('tibot-onboarding-completed');
+    setShowOnboarding(true);
+    console.log('Onboarding forcé pour le test');
   }, []);
 
   const handleSendMessage = async () => {
@@ -421,7 +550,8 @@ const TiBotInterface = () => {
       setInputValue('');
       setIsTyping(true);
 
-      const response = await window.electron.mistral.chat(inputValue, language);
+      // Inclure les informations de personnalisation dans la requête
+      const response = await window.electron.mistral.chat(inputValue, language, personalization);
       
       if (response.success) {
         const botMessage = {
@@ -447,13 +577,27 @@ const TiBotInterface = () => {
         localStorage.setItem('tibot-conversations', JSON.stringify(updatedWithBotMessage));
         setMessages(prev => [...prev, botMessage]);
       } else {
-        throw new Error(response.error);
+        // Vérifier si l'erreur est liée à l'indisponibilité du serveur
+        if (response.serverUnavailable) {
+          throw new Error("Le serveur API Ti'Bot n'est pas disponible. Assurez-vous que le serveur est démarré sur localhost:3000.");
+        } else {
+          throw new Error(response.error);
+        }
       }
     } catch (error) {
       console.error('Erreur:', error);
+      
+      // Personnaliser le message d'erreur en fonction du type d'erreur
+      let errorContent = t('errors.aiError');
+      
+      // Si l'erreur indique que le serveur n'est pas disponible, afficher un message plus précis
+      if (error.message && error.message.includes("serveur API Ti'Bot n'est pas disponible")) {
+        errorContent = "Oups ! Le serveur API Ti'Bot n'est pas disponible. Assurez-vous que le serveur est démarré sur localhost:3000 avant d'utiliser le mode discussion.";
+      }
+      
       const errorMessage = {
         type: 'bot',
-        content: t('errors.aiError'),
+        content: errorContent,
         timestamp: new Date().toISOString(),
         isNew: true // Marquer le message d'erreur comme nouveau pour l'effet de frappe
       };
@@ -788,9 +932,19 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
 
           <div className="p-4 space-y-2">
-            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              {t('modes')}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                {t('modes')}
+              </p>
+              <button
+                onClick={() => setShowPersonalization(true)}
+                className={`flex items-center space-x-1 text-xs px-2 py-1 rounded transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                title="Personnaliser Ti'Bot"
+              >
+                <UserCircle className="w-3 h-3" />
+                <span>Personnaliser</span>
+              </button>
+            </div>
             {modes.map(mode => (
               <button
                 key={mode.id}
@@ -998,7 +1152,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </header>
 
           {activeMode === 'chat' && (
-            <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-6 flex flex-col">
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center">
                   <h1 className={`text-2xl font-bold mb-8 text-center max-w-2xl ${
@@ -1795,9 +1949,17 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
 
             <div className="sticky bottom-0 z-10 px-6 py-4 border-t backdrop-blur-lg bg-opacity-80 bg-inherit border-gray-700">
               <div className="flex items-center justify-between">
-                <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Version 1.0.0
-                </span>
+                <div className="flex flex-col items-start">
+                  <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Version 1.2.0
+                  </span>
+                  <button 
+                    onClick={resetOnboarding}
+                    className={`text-xs mt-1 ${darkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-500 hover:text-cyan-600'}`}
+                  >
+                    Réinitialiser l'écran d'accueil
+                  </button>
+                </div>
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setShowSettings(false)}
@@ -1820,6 +1982,113 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     {settingsSaved ? 'Enregistré !' : 'Sauvegarder'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal d'onboarding */}
+      {/* Panneau de personnalisation */}
+      <PersonalizationPanel
+        isOpen={showPersonalization}
+        onClose={() => setShowPersonalization(false)}
+        darkMode={darkMode}
+        personalization={personalization}
+        setPersonalization={setPersonalization}
+        onSave={handleSavePersonalization}
+      />
+      
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-70">
+          <div className={`w-full max-w-lg p-6 rounded-2xl shadow-2xl transform transition-all ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className="text-center">
+              <div className="mb-4 text-6xl">{currentStep.image}</div>
+              <h2 className={`text-2xl font-bold mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+                {currentStep.title}
+              </h2>
+              <p className={`text-lg mb-4 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                {currentStep.subtitle}
+              </p>
+              <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {currentStep.content}
+              </p>
+              
+              {currentStep.features && (
+                <div className="grid grid-cols-1 gap-4 mb-6">
+                  {currentStep.features.map((feature, index) => (
+                    <div key={index} className={`flex items-start p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                      <div className="text-2xl mr-3">{feature.icon}</div>
+                      <div className="text-left">
+                        <h3 className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{feature.name}</h3>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{feature.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {currentStep.input && (
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Votre nom"
+                  className={`w-full px-4 py-3 mb-6 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'}`}
+                />
+              )}
+              
+              {currentStep.toggle && (
+                <div className="flex items-center justify-center mb-6 space-x-4">
+                  <button
+                    onClick={() => setDarkMode(false)}
+                    className={`p-4 rounded-xl transition-all ${!darkMode ? 'bg-cyan-500 text-white' : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    <Sun className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={() => setDarkMode(true)}
+                    className={`p-4 rounded-xl transition-all ${darkMode ? 'bg-cyan-500 text-white' : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    <Moon className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+              
+              <div className="flex flex-col space-y-3">
+                <button
+                  onClick={handleOnboardingNext}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl hover:from-cyan-600 hover:to-cyan-700 transition-all transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                >
+                  {currentStep.action}
+                </button>
+                
+                {onboardingStep < onboardingSteps.length - 1 ? (
+                  <button
+                    onClick={handleSkipOnboarding}
+                    className={`text-sm ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Passer l'introduction
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-center mt-4">
+                    <input
+                      type="checkbox"
+                      id="dontShowAgain"
+                      className="mr-2"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          localStorage.setItem('tibot-onboarding-completed', 'true');
+                        } else {
+                          localStorage.setItem('tibot-onboarding-completed', 'false');
+                        }
+                      }}
+                    />
+                    <label htmlFor="dontShowAgain" className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Ne plus afficher au démarrage
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
           </div>

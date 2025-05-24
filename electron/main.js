@@ -1,11 +1,77 @@
-require('dotenv').config();
-const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
+// Chargement des variables d'environnement
 const path = require('path');
-const isDev = !app.isPackaged;
 const fs = require('fs');
+const dotenv = require('dotenv');
+const log = require('electron-log');
+
+// Configuration des logs
+log.transports.file.level = 'debug';
+log.transports.console.level = 'debug';
+
+// Importer les clés API par défaut
+const defaultKeys = require('./config/default-keys');
+
+// Fonction pour configurer les clés API
+function setupApiKeys() {
+  // Essayer de charger depuis le fichier .env
+  let envLoaded = false;
+  const envPath = path.resolve(process.cwd(), '.env');
+  
+  if (fs.existsSync(envPath)) {
+    log.info('Fichier .env trouvé, chargement des variables d\'environnement...');
+    const result = dotenv.config({ path: envPath });
+    
+    if (!result.error) {
+      envLoaded = true;
+      log.info('Variables d\'environnement chargées avec succès');
+    } else {
+      log.error('Erreur lors du chargement du fichier .env:', result.error);
+    }
+  } else {
+    // Essayer de charger depuis le répertoire parent (utile pour les versions packagées)
+    const parentEnvPath = path.resolve(process.cwd(), '..', '.env');
+    
+    if (fs.existsSync(parentEnvPath)) {
+      log.info('Fichier .env trouvé dans le répertoire parent, chargement...');
+      const result = dotenv.config({ path: parentEnvPath });
+      
+      if (!result.error) {
+        envLoaded = true;
+        log.info('Variables d\'environnement chargées avec succès depuis le répertoire parent');
+      } else {
+        log.error('Erreur lors du chargement du fichier .env parent:', result.error);
+      }
+    }
+  }
+  
+  // Si aucun fichier .env n'a été trouvé ou si les clés ne sont pas définies, utiliser les clés par défaut
+  if (!process.env.MISTRAL_API_KEY) {
+    log.info('Clé API Mistral non trouvée dans les variables d\'environnement, utilisation de la clé par défaut');
+    process.env.MISTRAL_API_KEY = defaultKeys.MISTRAL_API_KEY;
+  }
+  
+  if (!process.env.STABLE_DIFFUSION_API_KEY) {
+    log.info('Clé API Stable Diffusion non trouvée dans les variables d\'environnement, utilisation de la clé par défaut');
+    process.env.STABLE_DIFFUSION_API_KEY = defaultKeys.STABLE_DIFFUSION_API_KEY;
+  }
+  
+  // Vérifier que les clés sont disponibles
+  log.info('Clé API Mistral disponible:', !!process.env.MISTRAL_API_KEY);
+  log.info('Clé API Stable Diffusion disponible:', !!process.env.STABLE_DIFFUSION_API_KEY);
+}
+
+// Configurer les clés API
+setupApiKeys();
+
+const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
+const isDev = !app.isPackaged;
 const { getIconPath } = require('./icons');
 const { initialize: initializeUpdater } = require('./updater');
-require('./services/mistralService'); // Initialiser le service Mistral
+
+// Initialiser les services après le chargement des variables d'environnement
+const mistralService = require('./services/mistralService');
+const stableDiffusionService = require('./services/stableDiffusionService');
+const codeService = require('./services/codeService');
 
 let mainWindow;
 

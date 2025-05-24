@@ -14,6 +14,7 @@ export const translations = {
     image: 'Zimaz',
     code: 'Kod',
     history: 'Listwar Kozman',
+    noHistory: 'Listwar i lé vid',
 
     // Modèles IA
     models: {
@@ -40,6 +41,8 @@ export const translations = {
     messagePlaceholder: "Tap out messaz isi... (kréol ou fransé)",
     sendMessage: "Anvoy",
     typingIndicator: "Ka réfléshi...",
+    newChat: "Nouvo Kozé",
+    newImage: "Nouvo Zimaz",
     
     // Image generation
     imageDescription: "Dekri kosa ou i vé vwar, Ti'Bot i kré pou ou!",
@@ -131,7 +134,6 @@ export const translations = {
     },
 
     // Chat
-    newChat: "Nouvo kozman",
     inputPlaceholder: "Koz ek mwin an kréol ou fransé...",
     
     // Code examples and descriptions
@@ -149,8 +151,16 @@ export const translations = {
     errors: {
       aiError: "Oups ! Na in ti problèm èk lo servèr IA. Essaye in ot foi sivouplé !",
       networkError: "Problèm connexion ! Vérifie out internet sivouplé.",
-      unknownError: "Oups ! Na in problèm. Essaye in ot foi sivouplé !"
-    }
+      unknownError: "Oups ! Na in problèm. Essaye in ot foi sivouplé !",
+      imageGenerationFailed: "Problèm pou kré out zimaz !",
+      serverUnavailable: "Lo servèr API Ti'Bot i lé pa disponib. Asir aou ke lo servèr lé démaré si localhost:3000."
+    },
+    
+    // Image features
+    downloadImage: "Télécharz zimaz",
+    variation: "Varyasion",
+    variations: "Fé dot varyasion",
+    tryAgain: "Essaye ankor"
   },
   french: {
     // Général
@@ -167,6 +177,7 @@ export const translations = {
     image: 'Images',
     code: 'Code',
     history: 'Historique',
+    noHistory: 'Aucun historique disponible',
 
     // Modèles IA
     models: {
@@ -193,6 +204,8 @@ export const translations = {
     messagePlaceholder: "Tapez votre message ici... (créole ou français)",
     sendMessage: "Envoyer",
     typingIndicator: "En train de réfléchir...",
+    newChat: "Nouvelle Discussion",
+    newImage: "Nouvelle Image",
     
     // Image generation
     imageDescription: "Décrivez ce que vous voulez voir, Ti'Bot le crée pour vous !",
@@ -302,7 +315,15 @@ export const translations = {
     errors: {
       aiError: "Oups ! Il y a eu un problème avec le serveur IA. Veuillez réessayer !",
       networkError: "Problème de connexion ! Vérifiez votre connexion internet.",
-      unknownError: "Oups ! Une erreur est survenue. Veuillez réessayer !"
-    }
+      unknownError: "Oups ! Une erreur est survenue. Veuillez réessayer !",
+      imageGenerationFailed: "Problème lors de la génération de l'image !",
+      serverUnavailable: "Le serveur API Ti'Bot n'est pas disponible. Assurez-vous que le serveur est démarré sur localhost:3000."
+    },
+    
+    // Image features
+    downloadImage: "Télécharger l'image",
+    variation: "Variation",
+    variations: "Créer des variations",
+    tryAgain: "Réessayer"
   }
 }; 

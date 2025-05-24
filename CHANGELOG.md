@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.2.0] - 2025-05-24
+
+### Nouvelles fonctionnalités
+- Ajout d'un panneau de personnalisation pour Ti'Bot
+  - Possibilité d'indiquer son nom pour une expérience personnalisée
+  - Sélection du secteur de résidence à La Réunion (Nord, Sud, Est, Ouest, Hauts)
+  - Choix du niveau de créole préféré (débutant à natif)
+  - Sélection du style de communication (formel, conversationnel, direct, créole, mixte)
+  - Définition des centres d'intérêt liés à La Réunion
+  - Ajout d'informations supplémentaires personnalisées
+- Adaptation des réponses de Ti'Bot en fonction des préférences utilisateur
+
+### Corrections
+- Résolution du problème de communication avec le serveur API intermédiaire
+  - Amélioration de la détection de disponibilité du serveur
+  - Messages d'erreur plus clairs et informatifs pour l'utilisateur
+  - Correction des problèmes d'encodage dans le fichier .env du serveur
+- Correction du bug de l'effet de frappe (typing effect) qui s'appliquait à tous les messages
+  - Les messages chargés depuis l'historique s'affichent maintenant immédiatement sans effet de frappe
+  - Seuls les nouveaux messages envoyés par l'utilisateur et les nouvelles réponses du bot ont l'effet de frappe
+- Amélioration de la navigation dans les conversations
+  - Ajout du défilement automatique vers les nouveaux messages
+  - Défilement automatique en temps réel pendant que Ti'Bot écrit sa réponse
+  - Mémorisation de la position de défilement lors du changement de conversation
+  - Restauration de la position précédente lors du rechargement d'une conversation
+
+### Améliorations
+- Meilleure gestion des erreurs de connexion au serveur API
+- Logs plus détaillés pour faciliter le débogage
+- Optimisation des performances lors du chargement des conversations
+- Restauration de l'écran d'accueil (onboarding)
+  - Affichage au premier lancement de l'application
+  - Ajout d'une option "Ne plus afficher au démarrage"
+  - Amélioration de l'interface utilisateur
+
 ## [1.0.5] - 2025-05-24
 
 ### Ajouts
