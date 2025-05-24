@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.1] - 2025-05-25
+
+### Améliorations
+- Migration du serveur API vers Render pour une meilleure disponibilité
+  - Accès au serveur API pour tous les utilisateurs sans configuration
+  - Basculement automatique vers le serveur local si nécessaire
+  - Messages d'erreur améliorés en cas d'indisponibilité du serveur
+- Sécurisation des clés API sensibles sur le serveur distant
+
 ## [1.2.0] - 2025-05-24
 
 ### Nouvelles fonctionnalités
@@ -11,6 +20,10 @@
   - Définition des centres d'intérêt liés à La Réunion
   - Ajout d'informations supplémentaires personnalisées
 - Adaptation des réponses de Ti'Bot en fonction des préférences utilisateur
+- Intégration du serveur API directement dans l'application
+  - Fonctionnement autonome sans nécessiter de serveur externe
+  - Compatibilité avec tous les modes (discussion, image, code)
+  - Installation simplifiée pour les utilisateurs
 
 ### Corrections
 - Résolution du problème de communication avec le serveur API intermédiaire

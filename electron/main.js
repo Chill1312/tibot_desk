@@ -68,6 +68,9 @@ const isDev = !app.isPackaged;
 const { getIconPath } = require('./icons');
 const { initialize: initializeUpdater } = require('./updater');
 
+// Nous utilisons maintenant le serveur API hébergé sur Render
+// Plus besoin du serveur API intégré
+
 // Initialiser les services après le chargement des variables d'environnement
 const mistralService = require('./services/mistralService');
 const stableDiffusionService = require('./services/stableDiffusionService');
@@ -75,7 +78,12 @@ const codeService = require('./services/codeService');
 
 let mainWindow;
 
+// Nous utilisons maintenant le serveur API hébergé sur Render
+// La fonction startIntegratedApiServer a été supprimée
+
 function createWindow() {
+  // Plus besoin de démarrer le serveur API intégré car nous utilisons Render
+  
   const iconPath = getIconPath();
   console.log('Chemin de l\'icône:', iconPath);
   console.log('L\'icône existe:', fs.existsSync(iconPath));
@@ -224,6 +232,8 @@ ipcMain.handle('window-control', (event, command) => {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
+  // Plus besoin de gérer l'arrêt du serveur API intégré car nous utilisons Render
+  
   if (process.platform !== 'darwin') {
     app.quit();
   }

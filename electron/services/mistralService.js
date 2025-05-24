@@ -7,7 +7,12 @@ log.transports.file.level = 'debug';
 log.transports.console.level = 'debug';
 
 // URL du serveur API intermédiaire
-const API_SERVER_URL = 'http://localhost:3000/api';
+// Par défaut, utiliser le serveur distant. Si celui-ci n'est pas disponible, essayer localhost
+const DEFAULT_REMOTE_API_URL = 'https://tibot-api-server.onrender.com/api'; // URL du serveur déployé sur Render
+const LOCAL_API_URL = 'http://localhost:3000/api';
+
+// Utiliser le serveur distant par défaut
+let API_SERVER_URL = DEFAULT_REMOTE_API_URL;
 
 // Clé API pour accéder au serveur intermédiaire (doit correspondre à API_KEY_SECRET dans le serveur)
 const API_KEY = 'tibot_secret_key_change_this_in_production';
@@ -37,11 +42,62 @@ class MistralService {
     
     // Méthode pour vérifier si le serveur API est disponible
     async checkServerAvailability() {
-        // Toujours considérer le serveur comme disponible pour les tests
-        // Nous gérerons les erreurs de connexion directement dans la méthode generateResponse
-        log.info('Considérant le serveur API comme disponible');
-        isServerAvailable = true;
-        return true;
+        const now = Date.now();
+        
+        // Ne pas vérifier trop fréquemment
+        if (now - lastServerCheck < SERVER_CHECK_INTERVAL) {
+            return isServerAvailable;
+        }
+        
+        lastServerCheck = now;
+        
+        // Essayer d'abord le serveur distant
+        try {
+            log.info('Vérification de la disponibilité du serveur distant...');
+            API_SERVER_URL = DEFAULT_REMOTE_API_URL;
+            
+            const response = await axios.get(DEFAULT_REMOTE_API_URL.replace('/api', ''), {
+                timeout: 5000,
+                headers: {
+                    'x-api-key': API_KEY
+                }
+            });
+            
+            if (response.status === 200) {
+                log.info('Serveur distant disponible!');
+                isServerAvailable = true;
+                return true;
+            }
+        } catch (error) {
+            log.warn('Serveur distant non disponible:', error.message);
+            
+            // Essayer ensuite le serveur local
+            try {
+                log.info('Tentative de connexion au serveur local...');
+                API_SERVER_URL = LOCAL_API_URL;
+                
+                const localResponse = await axios.get(LOCAL_API_URL.replace('/api', ''), {
+                    timeout: 3000,
+                    headers: {
+                        'x-api-key': API_KEY
+                    }
+                });
+                
+                if (localResponse.status === 200) {
+                    log.info('Serveur local disponible!');
+                    isServerAvailable = true;
+                    return true;
+                }
+            } catch (localError) {
+                log.error('Serveur local non disponible:', localError.message);
+                isServerAvailable = false;
+                return false;
+            }
+        }
+        
+        // Si on arrive ici, aucun serveur n'est disponible
+        isServerAvailable = false;
+        return false;
     }
 
     initializeIpcListeners() {
@@ -56,7 +112,7 @@ class MistralService {
                 log.error('Serveur API non disponible pour traiter la requête');
                 return { 
                     success: false, 
-                    error: 'Le serveur API Ti\'Bot n\'est pas disponible. Assurez-vous que le serveur est démarré sur localhost:3000.',
+                    error: 'Ti\'Bot ne peut pas se connecter au serveur. Nous avons essayé le serveur distant et le serveur local, mais aucun n\'est disponible. Veuillez vérifier votre connexion internet.',
                     errorType: 'server_unavailable',
                     serverUnavailable: true
                 };
@@ -83,7 +139,7 @@ class MistralService {
                            errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ETIMEDOUT')) {
                     errorType = 'network_error';
                     serverUnavailable = true;
-                    errorMessage = 'Le serveur API Ti\'Bot n\'est pas disponible. Assurez-vous que le serveur est démarré sur localhost:3000.';
+                    errorMessage = 'Ti\'Bot ne peut pas se connecter au serveur. Nous avons essayé le serveur distant et le serveur local, mais aucun n\'est disponible. Veuillez vérifier votre connexion internet.';
                 } else if (errorMessage.includes('surchargé') || errorMessage.includes('429')) {
                     errorType = 'rate_limit_error';
                 }
