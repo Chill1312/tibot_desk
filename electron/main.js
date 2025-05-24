@@ -1,9 +1,11 @@
+require('dotenv').config();
 const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
 const isDev = !app.isPackaged;
 const fs = require('fs');
 const { getIconPath } = require('./icons');
 const { initialize: initializeUpdater } = require('./updater');
+require('./services/mistralService'); // Initialiser le service Mistral
 
 let mainWindow;
 

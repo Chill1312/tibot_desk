@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Image, Code, Settings, Menu, X, Send, Sparkles, User, Bot, Home, History, Plus, Moon, Sun, Download, Copy, Palette, Wand2, RefreshCw, Check, Terminal, Globe, Cpu, Save, Bell, Database, Type, Shield, HelpCircle, LogOut } from 'lucide-react';
 import logoImage from '../assets/logo.png';
 import UpdateNotification from './components/UpdateNotification';
+import TypingEffect from './components/TypingEffect';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 
@@ -13,9 +15,17 @@ const TiBotInterface = () => {
   const [useSystemTheme, setUseSystemTheme] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [language, setLanguage] = useState(i18n.language || 'french');
-  const [messages, setMessages] = useState([
-    { id: 1, type: 'bot', content: t('welcome') }
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [welcomeTitle] = useState(() => {
+    const titles = [
+      "Bienvenue dans Ti'Bot ! Posez-moi une question en créole ou en français.",
+      "Bonjour ! Je suis là pour vous aider à découvrir la culture réunionnaise.",
+      "Oté ! Mi lé la pou kozé èk ou en kréol ou fransé.",
+      "Découvrez la richesse de notre île avec Ti'Bot.",
+      "Ensemble, préservons notre langue et notre culture."
+    ];
+    return titles[Math.floor(Math.random() * titles.length)];
+  });
 
   useEffect(() => {
     const changeLanguage = async () => {
@@ -142,19 +152,42 @@ const TiBotInterface = () => {
     }
   }, []);
 
-  const handleSendMessage = () => {
-    if (inputValue.trim()) {
-      const newUserMessage = { id: messages.length + 1, type: 'user', content: inputValue };
-      setMessages([...messages, newUserMessage]);
-      setInputValue('');
-      setIsTyping(true);
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage = {
+      type: 'user',
+      content: inputValue,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsTyping(true);
+
+    try {
+      const response = await window.electron.mistral.chat(inputValue, language);
       
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages(prev => [...prev, 
-          { id: prev.length + 1, type: 'bot', content: 'Mi ka réfléshi dsi out kestion... Voilà kosa mi panse!' }
-        ]);
-      }, 2000);
+      if (response.success) {
+        const botMessage = {
+          type: 'bot',
+          content: response.data,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, botMessage]);
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      const errorMessage = {
+        type: 'bot',
+        content: t('errors.aiError'),
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -410,45 +443,122 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
         </header>
 
         {activeMode === 'chat' && (
-          <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className="max-w-3xl mx-auto space-y-4">
-              {messages.map((message, index) => (
-                <div 
-                  key={message.id} 
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className={`flex items-start space-x-3 max-w-2xl ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-transform hover:scale-110 ${
-                      message.type === 'bot' 
-                        ? 'bg-gradient-to-br from-cyan-500 to-cyan-600' 
-                        : 'bg-gradient-to-br from-orange-400 to-orange-500'
-                    }`}>
-                      {message.type === 'bot' ? 
-                        <Bot className="w-5 h-5 text-white" /> : 
-                        <User className="w-5 h-5 text-white" />
-                      }
-                    </div>
-                    <div className={`px-4 py-3 rounded-2xl transition-all hover:shadow-lg ${
-                      message.type === 'bot' 
-                        ? darkMode 
-                          ? 'bg-gray-800 border border-gray-700' 
-                          : 'bg-white border border-gray-200'
-                        : 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white'
-                    }`}>
-                      <p className={`text-sm ${
-                        message.type === 'bot' 
-                          ? darkMode ? 'text-gray-200' : 'text-gray-700'
-                          : ''
+          <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col">
+            {messages.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <h1 className={`text-2xl font-bold mb-8 text-center max-w-2xl ${
+                  darkMode ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  {welcomeTitle}
+                </h1>
+                <div className="w-full max-w-3xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1 relative group">
+                      <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder={t('inputPlaceholder')}
+                        className={`w-full px-4 py-3 pr-12 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
+                          darkMode 
+                            ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-400' 
+                            : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
+                        } border`}
+                      />
+                      <button className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 transition-all group-focus-within:scale-110 ${
+                        darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
                       }`}>
-                        {message.content}
-                      </p>
+                        <Sparkles className="w-5 h-5" />
+                      </button>
                     </div>
+                    <button
+                      onClick={handleSendMessage}
+                      className="p-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl hover:from-cyan-600 hover:to-cyan-700 transition-all transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
                   </div>
+                  <p className={`text-xs mt-2 text-center ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {t('enterToSend')}
+                  </p>
                 </div>
-              ))}
-              {isTyping && <TypingIndicator />}
-            </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col">
+                <div className="w-full px-2">
+                  {messages.map((message, index) => (
+                    <div 
+                      key={index} 
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <div className={`flex items-start space-x-2 ${
+                        message.type === 'user' 
+                          ? 'flex-row-reverse space-x-reverse ml-auto' 
+                          : 'mr-auto'
+                      } w-fit max-w-[95%]`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-transform hover:scale-110 flex-shrink-0 ${
+                          message.type === 'bot' 
+                            ? 'bg-gradient-to-br from-cyan-500 to-cyan-600' 
+                            : 'bg-gradient-to-br from-cyan-500 to-cyan-600'
+                        }`}>
+                          {message.type === 'bot' ? 
+                            <Bot className="w-5 h-5 text-white" /> : 
+                            <User className="w-5 h-5 text-white" />
+                          }
+                        </div>
+                        <div className={`px-4 py-2.5 rounded-2xl transition-all hover:shadow-lg ${
+                          message.type === 'bot' 
+                            ? darkMode 
+                              ? 'bg-gray-800 border border-gray-700' 
+                              : 'bg-white border border-gray-200'
+                            : darkMode
+                              ? 'bg-cyan-600 text-white'
+                              : 'bg-cyan-600 text-white'
+                        }`}>
+                          <div className={`prose ${
+                            message.type === 'bot' 
+                              ? darkMode 
+                                ? 'prose-invert prose-headings:text-gray-100 prose-p:text-gray-300 prose-strong:text-cyan-300 prose-em:text-gray-200 prose-blockquote:text-cyan-200 prose-blockquote:border-cyan-500 prose-blockquote:bg-gray-700/30 prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:rounded-sm prose-li:text-gray-300 prose-li:marker:text-cyan-400' 
+                                : 'prose-neutral'
+                              : 'text-white prose-headings:text-white prose-p:text-white prose-strong:text-white prose-em:text-white prose-blockquote:text-white prose-li:text-white'
+                          } prose-sm max-w-none prose-blockquote:border-l-4 prose-li:my-0 prose-p:my-2 ${
+                            darkMode ? 'prose-blockquote:border-cyan-500' : ''
+                          }`}>
+                            {message.type === 'bot' ? (
+                              <TypingEffect 
+                                content={message.content}
+                                className={message.type === 'bot' ? '' : 'text-white'}
+                              />
+                            ) : (
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div className="flex justify-start animate-fadeIn">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-500 to-cyan-600">
+                          <Bot className="w-5 h-5 text-white" />
+                        </div>
+                        <div className={`px-6 py-4 rounded-2xl ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                          <div className="flex space-x-2">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1" />
+              </div>
+            )}
           </div>
         )}
 
@@ -733,7 +843,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
         )}
 
-        {activeMode === 'chat' && (
+        {activeMode === 'chat' && messages.length > 0 && (
           <div className={`border-t px-4 py-4 transition-colors ${
             darkMode 
               ? 'bg-gray-800 border-gray-700' 

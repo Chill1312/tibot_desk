@@ -5,7 +5,7 @@ export const translations = {
     subtitle: "IA Kréol La Rénion",
     footer: "Ti'Bot - Premié IA kréol La Rénion",
     recommended: "Rekomandé",
-    enterToSend: "Apiy si Enter pou anvoyé",
+    enterToSend: "Apiy si Enter pou anvoy out messaz",
 
     // Navigation
     settings: 'Paramèt',
@@ -132,7 +132,7 @@ export const translations = {
 
     // Chat
     newChat: "Nouvo kozman",
-    inputPlaceholder: "Tap out messaz isi... (kréol ou fransé)",
+    inputPlaceholder: "Koz ek mwin an kréol ou fransé...",
     
     // Code examples and descriptions
     codeLanguages: {
@@ -145,6 +145,11 @@ export const translations = {
     readyToCode: {
       title: "Paré pou kod?",
       description: "Explik kosa ou i vé, Ti'Bot i okip tout!"
+    },
+    errors: {
+      aiError: "Oups ! Na in ti problèm èk lo servèr IA. Essaye in ot foi sivouplé !",
+      networkError: "Problèm connexion ! Vérifie out internet sivouplé.",
+      unknownError: "Oups ! Na in problèm. Essaye in ot foi sivouplé !"
     }
   },
   french: {
@@ -280,7 +285,7 @@ export const translations = {
 
     // Chat
     newChat: "Nouvelle discussion",
-    inputPlaceholder: "Tapez votre message ici... (créole ou français)",
+    inputPlaceholder: "Posez votre question en créole ou en français...",
     
     // Code examples and descriptions
     codeLanguages: {
@@ -293,6 +298,11 @@ export const translations = {
     readyToCode: {
       title: "Prêt à coder ?",
       description: "Expliquez ce que vous voulez, Ti'Bot s'occupe de tout !"
+    },
+    errors: {
+      aiError: "Oups ! Il y a eu un problème avec le serveur IA. Veuillez réessayer !",
+      networkError: "Problème de connexion ! Vérifiez votre connexion internet.",
+      unknownError: "Oups ! Une erreur est survenue. Veuillez réessayer !"
     }
   }
 }; 
