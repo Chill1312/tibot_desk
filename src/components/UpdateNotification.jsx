@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, RefreshCw, X, Check } from 'lucide-react';
 
-const electron = window.require('electron');
-const ipcRenderer = electron.ipcRenderer;
-
 const UpdateNotification = ({ darkMode }) => {
     const [updateStatus, setUpdateStatus] = useState(null);
     const [progress, setProgress] = useState(0);
@@ -11,59 +8,70 @@ const UpdateNotification = ({ darkMode }) => {
     const [showNotification, setShowNotification] = useState(false);
 
     useEffect(() => {
+        // Vérifier si nous sommes dans un environnement Electron
+        if (!window.electron) return;
+
         // Écouter les événements de mise à jour
-        ipcRenderer.on('update-status', (_, message) => {
+        window.electron.on('update-status', (event, message) => {
             setUpdateStatus(message);
             setShowNotification(true);
         });
 
-        ipcRenderer.on('update-available', (_, info) => {
+        window.electron.on('update-available', (event, info) => {
             setVersion(info.version);
             setShowNotification(true);
             setUpdateStatus('nouvo vèrsion');
         });
 
-        ipcRenderer.on('update-not-available', () => {
+        window.electron.on('update-not-available', () => {
             setShowNotification(false);
             setUpdateStatus(null);
         });
 
-        ipcRenderer.on('update-error', (_, error) => {
+        window.electron.on('update-error', (event, error) => {
             setUpdateStatus('erreur');
             setShowNotification(true);
         });
 
-        ipcRenderer.on('update-progress', (_, progressObj) => {
+        window.electron.on('update-progress', (event, progressObj) => {
             setProgress(progressObj.percent);
             setUpdateStatus('téléchargement');
         });
 
-        ipcRenderer.on('update-downloaded', () => {
+        window.electron.on('update-downloaded', () => {
             setUpdateStatus('prêt');
             setShowNotification(true);
         });
 
         // Nettoyage des listeners
         return () => {
-            ipcRenderer.removeAllListeners('update-status');
-            ipcRenderer.removeAllListeners('update-available');
-            ipcRenderer.removeAllListeners('update-not-available');
-            ipcRenderer.removeAllListeners('update-error');
-            ipcRenderer.removeAllListeners('update-progress');
-            ipcRenderer.removeAllListeners('update-downloaded');
+            if (window.electron) {
+                window.electron.removeAllListeners('update-status');
+                window.electron.removeAllListeners('update-available');
+                window.electron.removeAllListeners('update-not-available');
+                window.electron.removeAllListeners('update-error');
+                window.electron.removeAllListeners('update-progress');
+                window.electron.removeAllListeners('update-downloaded');
+            }
         };
     }, []);
 
     const handleStartUpdate = () => {
-        ipcRenderer.invoke('start-update');
+        if (window.electron) {
+            window.electron.invoke('start-update');
+        }
     };
 
     const handleInstallUpdate = () => {
-        ipcRenderer.invoke('install-update');
+        if (window.electron) {
+            window.electron.invoke('install-update');
+        }
     };
 
     const handleCheckForUpdates = () => {
-        ipcRenderer.invoke('check-for-updates');
+        if (window.electron) {
+            window.electron.invoke('check-for-updates');
+        }
     };
 
     if (!showNotification) return null;

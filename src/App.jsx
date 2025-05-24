@@ -2,22 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Image, Code, Settings, Menu, X, Send, Sparkles, User, Bot, Home, History, Plus, Moon, Sun, Download, Copy, Palette, Wand2, RefreshCw, Check, Terminal, Globe, Cpu, Save, Bell, Database, Type, Shield, HelpCircle, LogOut } from 'lucide-react';
 import logoImage from '../assets/logo.png';
 import UpdateNotification from './components/UpdateNotification';
+import { useTranslation } from 'react-i18next';
+import './i18n';
 
 const TiBotInterface = () => {
+  const { t, i18n } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMode, setActiveMode] = useState('chat');
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [useSystemTheme, setUseSystemTheme] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [language, setLanguage] = useState(i18n.language || 'french');
   const [messages, setMessages] = useState([
-    { id: 1, type: 'bot', content: 'Bonzour! Moin lé Ti\'Bot, out premier assistant IA kréol! Mi pé aid aou an kréol ou an fransé. Kosa ou i vé fer zordi?' }
+    { id: 1, type: 'bot', content: t('welcome') }
   ]);
+
+  useEffect(() => {
+    const changeLanguage = async () => {
+      try {
+        if (language !== i18n.language) {
+          await i18n.changeLanguage(language);
+          setMessages([
+            { id: 1, type: 'bot', content: t('welcome') }
+          ]);
+        }
+      } catch (error) {
+        console.error('Erreur lors du changement de langue:', error);
+      }
+    };
+    changeLanguage();
+  }, [language, i18n, t]);
+
   const [inputValue, setInputValue] = useState('');
 
   const modes = [
-    { id: 'chat', name: 'Kozé', icon: MessageCircle, color: darkMode ? 'text-cyan-400' : 'text-cyan-600' },
-    { id: 'image', name: 'Zimaz', icon: Image, color: darkMode ? 'text-orange-400' : 'text-orange-500' },
-    { id: 'code', name: 'Kod', icon: Code, color: darkMode ? 'text-emerald-400' : 'text-emerald-600' }
+    { id: 'chat', name: t('chat'), icon: MessageCircle, color: darkMode ? 'text-cyan-400' : 'text-cyan-600' },
+    { id: 'image', name: t('image'), icon: Image, color: darkMode ? 'text-orange-400' : 'text-orange-500' },
+    { id: 'code', name: t('code'), icon: Code, color: darkMode ? 'text-emerald-400' : 'text-emerald-600' }
   ];
 
   const [imagePrompt, setImagePrompt] = useState('');
@@ -29,27 +50,7 @@ const TiBotInterface = () => {
 
   const [copied, setCopied] = useState(false);
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(generatedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const codeExamples = [
-    { lang: 'python', name: 'Kalkil kari' },
-    { lang: 'javascript', name: 'Distans zilé' },
-    { lang: 'html', name: 'Paz web kréol' }
-  ];
-
-  const imageStyles = [
-    { name: 'Réalis', icon: '🌊', desc: 'Foto réalis' },
-    { name: 'Artis', icon: '🎨', desc: 'Péintir artis' },
-    { name: 'Tropikal', icon: '🌺', desc: 'Stil tropikal' },
-    { name: 'Fantézi', icon: '✨', desc: 'Imajinèr' }
-  ];
-
   const [showSettings, setShowSettings] = useState(false);
-  const [language, setLanguage] = useState('auto');
   const [aiModel, setAiModel] = useState('tibot-base');
   const [autoSave, setAutoSave] = useState(true);
   const [notifications, setNotifications] = useState(true);
@@ -125,7 +126,6 @@ const TiBotInterface = () => {
       setOnboardingStep(onboardingStep + 1);
     } else {
       setShowOnboarding(false);
-      // Sauvegarder que l'onboarding a été complété
       localStorage.setItem('tibot-onboarding-completed', 'true');
     }
   };
@@ -135,7 +135,6 @@ const TiBotInterface = () => {
     localStorage.setItem('tibot-onboarding-completed', 'true');
   };
 
-  // Check if onboarding has been completed before
   useEffect(() => {
     const onboardingCompleted = localStorage.getItem('tibot-onboarding-completed');
     if (onboardingCompleted) {
@@ -150,7 +149,6 @@ const TiBotInterface = () => {
       setInputValue('');
       setIsTyping(true);
       
-      // Simulation réponse bot
       setTimeout(() => {
         setIsTyping(false);
         setMessages(prev => [...prev, 
@@ -163,7 +161,6 @@ const TiBotInterface = () => {
   const handleGenerateImage = () => {
     if (imagePrompt.trim()) {
       setIsGenerating(true);
-      // Simulation génération d'images
       setTimeout(() => {
         setGeneratedImages([
           { id: 1, url: 'https://via.placeholder.com/512x512/0891B2/FFFFFF?text=Lagon+Bleu' },
@@ -179,7 +176,6 @@ const TiBotInterface = () => {
   const handleGenerateCode = () => {
     if (codePrompt.trim()) {
       setIsGenerating(true);
-      // Simulation génération de code
       setTimeout(() => {
         const codeExamples = {
           python: `# Kalkil pou fé in bon kari poulet
@@ -222,7 +218,25 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
     }
   };
 
-  // Animation de frappe
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(generatedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const imageStyles = [
+    { name: 'realistic', icon: '🌊', desc: t('imageStylesDesc.realistic') },
+    { name: 'artistic', icon: '🎨', desc: t('imageStylesDesc.artistic') },
+    { name: 'tropical', icon: '🌺', desc: t('imageStylesDesc.tropical') },
+    { name: 'fantasy', icon: '✨', desc: t('imageStylesDesc.fantasy') }
+  ];
+
+  const codeExamples = [
+    { lang: 'python', name: t('codeExamples.python') },
+    { lang: 'javascript', name: t('codeExamples.javascript') },
+    { lang: 'html', name: t('codeExamples.html') }
+  ];
+
   const TypingIndicator = () => (
     <div className="flex items-start space-x-3">
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-500 to-cyan-600`}>
@@ -238,25 +252,39 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
     </div>
   );
 
-  // Écouter le thème système
   useEffect(() => {
-    const electron = window.require('electron');
-    const ipcRenderer = electron.ipcRenderer;
+    if (window.electron) {
+      window.electron.on('system-theme-changed', (event, shouldUseDark) => {
+        if (useSystemTheme) {
+          setDarkMode(shouldUseDark);
+        }
+      });
 
-    ipcRenderer.on('system-theme-changed', (_, shouldUseDark) => {
-      if (useSystemTheme) {
-        setDarkMode(shouldUseDark);
-      }
-    });
-
-    return () => {
-      ipcRenderer.removeAllListeners('system-theme-changed');
-    };
+      return () => {
+        if (window.electron) {
+          window.electron.removeAllListeners('system-theme-changed');
+        }
+      };
+    }
   }, [useSystemTheme]);
+
+  const handleLanguageChange = (newLanguage) => {
+    console.log('Changement de langue vers:', newLanguage);
+    const languageToSet = newLanguage === 'creole' ? 'creole' : 'french';
+    if (languageToSet !== language) {
+      setLanguage(languageToSet);
+      i18n.changeLanguage(languageToSet).then(() => {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.type === 'bot' ? { ...msg, content: t('welcome') } : msg
+          )
+        );
+      });
+    }
+  };
 
   return (
     <div className={`flex h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Sidebar */}
       <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r overflow-hidden flex flex-col`}>
         <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className="flex items-center space-x-3">
@@ -267,15 +295,16 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
             />
             <div>
               <h1 className={`font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Ti'Bot</h1>
-              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>IA Kréol La Rénion</p>
+              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('subtitle')}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Navigation modes */}
         <div className="p-4 space-y-2">
           <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            Bann Mod
+            {t('modes')}
           </p>
           {modes.map(mode => (
             <button
@@ -306,10 +335,9 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           ))}
         </div>
 
-        {/* Historique avec animation */}
         <div className="flex-1 px-4 py-3 overflow-y-auto">
           <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            Listwar Kozman
+            {t('history')}
           </p>
           <div className="space-y-1">
             {['Koman i fé in kari poulet?', 'Tradui an kréol pou mwin', 'Explik mwin bann volkan'].map((text, i) => (
@@ -327,7 +355,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
         </div>
 
-        {/* Paramètres */}
         <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
           <button 
             onClick={() => setShowSettings(true)}
@@ -336,14 +363,12 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
             }`}
           >
             <Settings className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-            <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Paramèt</span>
+            <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>{t('settings')}</span>
           </button>
         </div>
       </div>
 
-      {/* Zone principale */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className={`border-b px-4 py-3 transition-colors ${
           darkMode 
             ? 'bg-gray-800 border-gray-700' 
@@ -367,9 +392,9 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 {activeMode === 'image' && <Image className={`w-5 h-5 ${darkMode ? 'text-orange-400' : 'text-orange-500'}`} />}
                 {activeMode === 'code' && <Code className={`w-5 h-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />}
                 <h2 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                  {activeMode === 'chat' && 'Kozé ek Ti\'Bot'}
-                  {activeMode === 'image' && 'Kréasion Zimaz'}
-                  {activeMode === 'code' && 'Zénèr Kod'}
+                  {activeMode === 'chat' && t('chatHeader')}
+                  {activeMode === 'image' && t('sections.imageCreation')}
+                  {activeMode === 'code' && t('sections.codeGenerator')}
                 </h2>
               </div>
             </div>
@@ -379,12 +404,11 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 : 'bg-gray-100 hover:bg-gray-200'
             }`}>
               <Plus className={`w-4 h-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
-              <span className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Nouvo kozman</span>
+              <span className={`text-sm ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{t('newChat')}</span>
             </button>
           </div>
         </header>
 
-        {/* Zone de chat avec animations */}
         {activeMode === 'chat' && (
           <div className="flex-1 overflow-y-auto px-4 py-6">
             <div className="max-w-3xl mx-auto space-y-4">
@@ -428,32 +452,29 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
         )}
 
-        {/* Interface génération d'images */}
         {activeMode === 'image' && (
           <div className="flex-1 overflow-y-auto px-4 py-6">
             <div className="max-w-6xl mx-auto">
-              {/* Header section images */}
               <div className="text-center mb-8 animate-fadeIn">
                 <h2 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                  Kréasion Zimaz ek Ti'Bot
+                  {t('imageHeader')}
                 </h2>
                 <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Dekri kosa ou i vé vwar, Ti'Bot i kré pou ou!
+                  {t('imageDescription')}
                 </p>
               </div>
 
-              {/* Prompt area */}
               <div className={`p-6 rounded-xl mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg animate-fadeIn`}>
                 <div className="flex items-center space-x-2 mb-4">
                   <Palette className={`w-5 h-5 ${darkMode ? 'text-orange-400' : 'text-orange-500'}`} />
                   <h3 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                    Dekri out zimaz
+                    {t('imagePromptTitle')}
                   </h3>
                 </div>
                 <textarea
                   value={imagePrompt}
                   onChange={(e) => setImagePrompt(e.target.value)}
-                  placeholder="Ex: In pti kaz kréol ek varang blé, soleil koushan dèryèr piton d'la fournèz..."
+                  placeholder={t('imagePrompt')}
                   className={`w-full px-4 py-3 rounded-lg resize-none h-24 transition-all focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                     darkMode 
                       ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
@@ -471,7 +492,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                         title={style.desc}
                       >
                         <span>{style.icon}</span>
-                        <span>{style.name}</span>
+                        <span>{t(`imageStyles.${style.name}`)}</span>
                       </button>
                     ))}
                   </div>
@@ -487,30 +508,28 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     {isGenerating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Ka kré...</span>
+                        <span>{t('generating')}</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Kré zimaz</span>
+                        <span>{t('generateImage')}</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Welcome message when no images */}
               {generatedImages.length === 0 && !isGenerating && (
                 <div className={`text-center py-12 animate-fadeIn ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
                     <Image className="w-8 h-8 text-orange-500" />
                   </div>
-                  <p className="text-lg mb-2">Pa ankor gen zimaz</p>
-                  <p className="text-sm">Ekri kosa ou anvi vwar, Ti'Bot i kré pou ou!</p>
+                  <p className="text-lg mb-2">{t('empty.images')}</p>
+                  <p className="text-sm">{t('empty.imagesDesc')}</p>
                 </div>
               )}
 
-              {/* Generated images grid */}
               {generatedImages.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
                   {generatedImages.map((img, index) => (
@@ -545,30 +564,27 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
         )}
 
-        {/* Interface génération de code */}
         {activeMode === 'code' && (
           <div className="flex-1 overflow-y-auto px-4 py-6">
             <div className="max-w-5xl mx-auto">
-              {/* Header section code */}
               <div className="text-center mb-8 animate-fadeIn">
                 <h2 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                  Kod ek Ti'Bot
+                  {t('codeHeader')}
                 </h2>
                 <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Ti'Bot i pé ed aou kod dan tou bann langaz!
+                  {t('codeDescription')}
                 </p>
               </div>
 
-              {/* Quick examples */}
               <div className="mb-6">
                 <p className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Exanp rapid:
+                  {t('codeExamplesTitle')}:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {codeExamples.map((example) => (
                     <button
-                      key={example.name}
-                      onClick={() => setCodePrompt(`Fé in ${example.name} an ${selectedLanguage}`)}
+                      key={example.lang}
+                      onClick={() => setCodePrompt(t('codeExamplePrompt', { example: example.name, language: selectedLanguage }))}
                       className={`px-3 py-1.5 rounded-lg text-sm transition-all hover:scale-105 ${
                         darkMode 
                           ? 'bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600' 
@@ -581,13 +597,12 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </div>
               </div>
 
-              {/* Code generation area */}
               <div className={`p-6 rounded-xl mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg animate-fadeIn`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Terminal className={`w-5 h-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
                     <h3 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                      Kosa ou i vé kod?
+                      {t('codePromptTitle')}
                     </h3>
                   </div>
                   <select
@@ -609,7 +624,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 <textarea
                   value={codePrompt}
                   onChange={(e) => setCodePrompt(e.target.value)}
-                  placeholder="Ex: Fé in fonksion pou kalkil si in dat lé in zour férié La Rénion..."
+                  placeholder={t('codePlaceholder')}
                   className={`w-full px-4 py-3 rounded-lg resize-none h-24 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                     darkMode 
                       ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
@@ -618,16 +633,16 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 />
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center space-x-2 text-sm">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Nivo:</span>
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{t('codeLevel')}:</span>
                     <button className={`px-3 py-1 rounded-lg transition-all hover:scale-105 ${
                       darkMode ? 'bg-emerald-900 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
                     }`}>
-                      Débian
+                      {t('codeLevels.beginner')}
                     </button>
                     <button className={`px-3 py-1 rounded-lg transition-all hover:scale-105 ${
                       darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      Avansé
+                      {t('codeLevels.advanced')}
                     </button>
                   </div>
                   <button
@@ -642,41 +657,39 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     {isGenerating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Ka kod...</span>
+                        <span>{t('generating')}</span>
                       </>
                     ) : (
                       <>
                         <Code className="w-4 h-4" />
-                        <span>Zénèr kod</span>
+                        <span>{t('generateCode')}</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Welcome message when no code */}
               {!generatedCode && !isGenerating && (
                 <div className={`text-center py-12 animate-fadeIn ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center">
                     <Code className="w-8 h-8 text-emerald-600" />
                   </div>
-                  <p className="text-lg mb-2">Paré pou kod?</p>
-                  <p className="text-sm">Explik kosa ou i vé, Ti'Bot i okip tout!</p>
+                  <p className="text-lg mb-2">{t('readyToCode.title')}</p>
+                  <p className="text-sm">{t('readyToCode.description')}</p>
                   <div className="mt-6 flex justify-center space-x-4">
                     <div className="text-xs">
-                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Python</span>
+                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{t('codeLanguages.python')}</span>
                       <span className="mx-1">•</span>
-                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">JS</span>
+                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{t('codeLanguages.js')}</span>
                       <span className="mx-1">•</span>
-                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Java</span>
+                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{t('codeLanguages.java')}</span>
                       <span className="mx-1">•</span>
-                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">C++</span>
+                      <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{t('codeLanguages.cpp')}</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Generated code display */}
               {generatedCode && (
                 <div className={`rounded-xl overflow-hidden shadow-lg animate-fadeIn ${
                   darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-gray-900'
@@ -720,7 +733,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
         )}
 
-        {/* Zone d'input avec effet de focus */}
         {activeMode === 'chat' && (
           <div className={`border-t px-4 py-4 transition-colors ${
             darkMode 
@@ -735,7 +747,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Tap out messaz isi... (kréol ou fransé)"
+                    placeholder={t('inputPlaceholder')}
                     className={`w-full px-4 py-3 pr-12 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
                       darkMode 
                         ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
@@ -756,14 +768,13 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </button>
               </div>
               <p className={`text-xs mt-2 text-center ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                Ti'Bot i konpran kréol rényoné ek fransé • Pres Enter pou anvoy
+                {t('enterToSend')}
               </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Settings Modal */}
       {showSettings && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeIn"
@@ -776,7 +787,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           <div className={`w-full max-w-2xl max-h-[90vh] rounded-xl shadow-2xl overflow-hidden ${
             darkMode ? 'bg-gray-800' : 'bg-white'
           }`}>
-            {/* Settings Header */}
             <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -796,45 +806,40 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
               </div>
             </div>
 
-            {/* Settings Content */}
             <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
-              {/* Language Settings */}
               <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <Globe className={`w-5 h-5 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />
                   <h3 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                    Lang & Réjion
+                    {t('language.title')}
                   </h3>
                 </div>
                 <div className="space-y-3">
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Lang préféré
+                      {t('language.preferred')}
                     </label>
                     <select
                       value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
+                      onChange={(e) => handleLanguageChange(e.target.value)}
                       className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
                         darkMode 
                           ? 'bg-gray-700 border-gray-600 text-gray-100' 
                           : 'bg-gray-50 border-gray-300 text-gray-900'
                       }`}
                     >
-                      <option value="auto">Otomatik (Kréol/Fransé)</option>
-                      <option value="creole">Kréol sèlman</option>
-                      <option value="french">Fransé sèlman</option>
-                      <option value="bilingual">Touldé ansanm</option>
+                      <option value="creole">{t('language.creoleOnly')}</option>
+                      <option value="french">{t('language.frenchOnly')}</option>
                     </select>
                   </div>
                   <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
                     <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-blue-700'}`}>
-                      💡 Ti'Bot i adapte otomatikman selon out fason kozé
+                      💡 {t('language.tip')}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* AI Model Settings */}
               <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <Cpu className={`w-5 h-5 ${darkMode ? 'text-orange-400' : 'text-orange-600'}`} />
@@ -849,9 +854,9 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     </label>
                     <div className="space-y-2">
                       {[
-                        { id: 'tibot-base', name: 'Ti\'Bot Base', desc: 'Rapid & éfikas' },
-                        { id: 'tibot-pro', name: 'Ti\'Bot Pro', desc: 'Pli kapab, pli prési' },
-                        { id: 'tibot-creative', name: 'Ti\'Bot Kréatif', desc: 'Pou bann kréasion artis' }
+                        { id: 'tibot-base', name: t('models.base.name'), desc: t('models.base.desc') },
+                        { id: 'tibot-pro', name: t('models.pro.name'), desc: t('models.pro.desc') },
+                        { id: 'tibot-creative', name: t('models.creative.name'), desc: t('models.creative.desc') }
                       ].map(model => (
                         <label
                           key={model.id}
@@ -881,7 +886,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                           </div>
                           {model.id === 'tibot-pro' && (
                             <span className="text-xs bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-2 py-1 rounded-full">
-                              Rekomandé
+                              {t('recommended')}
                             </span>
                           )}
                         </label>
@@ -891,22 +896,21 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </div>
               </div>
 
-              {/* Privacy & Data */}
               <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <Shield className={`w-5 h-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
                   <h3 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                    Konfidansialité & Doné
+                    {t('privacy.title')}
                   </h3>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                        Sov otomatik listwar
+                        {t('privacy.autoSave')}
                       </p>
                       <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Gard out bann konvèrsasion lokalman
+                        {t('privacy.autoSaveDesc')}
                       </p>
                     </div>
                     <button
@@ -925,10 +929,10 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                        Notifikasion
+                        {t('privacy.notifications')}
                       </p>
                       <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Alèrt kan gen nouvo fonksionalité
+                        {t('privacy.notificationsDesc')}
                       </p>
                     </div>
                     <button
@@ -949,64 +953,26 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                       ? 'bg-red-900 hover:bg-red-800 text-red-200' 
                       : 'bg-red-50 hover:bg-red-100 text-red-600'
                   }`}>
-                    Efas tout bann doné
+                    {t('privacy.deleteData')}
                   </button>
                 </div>
               </div>
 
-              {/* Appearance */}
               <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <Type className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
                   <h3 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                    Aparans
-                  </h3>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Tay lékritir
-                    </label>
-                    <div className="flex space-x-2">
-                      {['pti', 'normal', 'gro'].map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setFontSize(size)}
-                          className={`px-4 py-2 rounded-lg capitalize transition-all ${
-                            fontSize === size
-                              ? darkMode
-                                ? 'bg-cyan-900 text-cyan-300 border-cyan-500'
-                                : 'bg-cyan-100 text-cyan-700 border-cyan-400'
-                              : darkMode
-                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          } border`}
-                        >
-                          {size === 'pti' ? 'Aa' : size === 'normal' ? 'Aa' : 'Aa'}
-                          <span className="ml-2 text-xs">{size}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nouvelle section pour le thème */}
-              <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                <div className="flex items-center space-x-3 mb-4">
-                  <Type className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-                  <h3 className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                    Tèm ek Aparans
+                    {t('appearance.title')}
                   </h3>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                        Swiv tèm Windows
+                        {t('appearance.systemTheme')}
                       </p>
                       <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Ti'Bot i adapte son tèm selon out réglaz Windows
+                        {t('appearance.systemThemeDesc')}
                       </p>
                     </div>
                     <button
@@ -1022,35 +988,31 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                       }`} />
                     </button>
                   </div>
-
-                  {!useSystemTheme && (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                          Mod fénwar
-                        </p>
-                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          Swis ant mod klèr ek mod fénwar
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setDarkMode(!darkMode)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          darkMode
-                            ? 'bg-cyan-600'
-                            : 'bg-gray-300'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          darkMode ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+                        {t('appearance.darkMode')}
+                      </p>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('appearance.darkModeDesc')}
+                      </p>
                     </div>
-                  )}
+                    <button
+                      onClick={() => setDarkMode(!darkMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        darkMode
+                          ? 'bg-cyan-600'
+                          : 'bg-gray-300'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        darkMode ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* About & Help */}
               <div className={`px-6 py-4`}>
                 <div className="space-y-3">
                   <button className={`w-full flex items-center justify-between p-3 rounded-lg transition-all hover:translate-x-1 ${
@@ -1058,25 +1020,24 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                   }`}>
                     <div className="flex items-center space-x-3">
                       <HelpCircle className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Èd & Gid</span>
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('help.title')}</span>
                     </div>
-                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>v1.0.0</span>
+                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{t('help.version')} 1.0.2</span>
                   </button>
                   <button className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all hover:translate-x-1 ${
                     darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
                   }`}>
                     <LogOut className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Dékonèkt</span>
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('help.logout')}</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Settings Footer */}
             <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
               <div className="flex items-center justify-between">
                 <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Ti'Bot - Premié IA kréol La Rénion 🌴
+                  {t('footer')} 🌴
                 </p>
                 <div className="flex items-center space-x-3">
                   <button
@@ -1087,7 +1048,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                         : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                     }`}
                   >
-                    Anilé
+                    {t('buttons.cancel')}
                   </button>
                   <button
                     onClick={handleSaveSettings}
@@ -1096,12 +1057,12 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     {settingsSaved ? (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>Paramèt sovgardé!</span>
+                        <span>{t('buttons.saved')}</span>
                       </>
                     ) : (
                       <>
                         <Save className="w-4 h-4" />
-                        <span>Sovgard Paramèt</span>
+                        <span>{t('buttons.save')}</span>
                       </>
                     )}
                   </button>
@@ -1129,13 +1090,11 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
         }
       `}      </style>
 
-      {/* Onboarding Modal */}
       {showOnboarding && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70 animate-fadeIn">
           <div className={`w-full max-w-lg mx-4 rounded-2xl shadow-2xl overflow-hidden transform transition-all ${
             darkMode ? 'bg-gray-800' : 'bg-white'
           }`}>
-            {/* Progress bar */}
             <div className="h-2 bg-gray-200 dark:bg-gray-700">
               <div 
                 className="h-full bg-gradient-to-r from-cyan-500 to-cyan-600 transition-all duration-500"
@@ -1143,9 +1102,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
               />
             </div>
 
-            {/* Content */}
             <div className="p-8">
-              {/* Skip button */}
               <div className="flex justify-end mb-4">
                 <button
                   onClick={handleSkipOnboarding}
@@ -1157,14 +1114,12 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </button>
               </div>
 
-              {/* Icon/Emoji */}
               <div className="text-center mb-6">
                 <div className="text-7xl mb-4 animate-bounce">
                   {currentStep.image}
                 </div>
               </div>
 
-              {/* Title and subtitle */}
               <h2 className={`text-2xl font-bold text-center mb-2 ${
                 darkMode ? 'text-gray-100' : 'text-gray-800'
               }`}>
@@ -1176,14 +1131,12 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 {currentStep.subtitle}
               </p>
 
-              {/* Content */}
               <p className={`text-center mb-6 ${
                 darkMode ? 'text-gray-300' : 'text-gray-700'
               }`}>
                 {currentStep.content}
               </p>
 
-              {/* Features list */}
               {currentStep.features && (
                 <div className="space-y-3 mb-6">
                   {currentStep.features.map((feature, index) => (
@@ -1212,7 +1165,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </div>
               )}
 
-              {/* Input field */}
               {currentStep.input && (
                 <div className="mb-6">
                   <input
@@ -1231,7 +1183,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </div>
               )}
 
-              {/* Dark mode toggle */}
               {currentStep.toggle && (
                 <div className="mb-6">
                   <div className={`flex items-center justify-center space-x-4 p-4 rounded-xl ${
@@ -1253,7 +1204,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 </div>
               )}
 
-              {/* Step indicators */}
               <div className="flex justify-center space-x-2 mb-6">
                 {onboardingSteps.map((_, index) => (
                   <div
@@ -1269,7 +1219,6 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 ))}
               </div>
 
-              {/* Action button */}
               <button
                 onClick={handleOnboardingNext}
                 className="w-full py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-medium hover:from-cyan-600 hover:to-cyan-700 transition-all transform hover:scale-105 shadow-lg"
@@ -1281,10 +1230,10 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
         </div>
       )}
 
-      {/* Ajout du composant UpdateNotification */}
       <UpdateNotification darkMode={darkMode} />
     </div>
   );
 };
 
-export default TiBotInterface;
+const App = TiBotInterface;
+export default App;
