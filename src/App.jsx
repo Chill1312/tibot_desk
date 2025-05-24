@@ -20,6 +20,18 @@ const TiBotInterface = () => {
   const [messages, setMessages] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
+  
+  // États pour l'historique des images
+  const [imageHistory, setImageHistory] = useState([]);
+  const [currentImageHistoryId, setCurrentImageHistoryId] = useState(null);
+  
+  // États pour le mode Code
+  const [codePrompt, setCodePrompt] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('javascript');
+  const [codeLevel, setCodeLevel] = useState('beginner');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [welcomeTitle] = useState(() => {
     const titles = [
       "Bienvenue dans Ti'Bot ! Posez-moi une question en créole ou en français.",
@@ -62,9 +74,10 @@ const TiBotInterface = () => {
     localStorage.setItem('tibot-conversations', JSON.stringify(updatedConversations));
   };
 
-  // Charger les conversations au démarrage
+  // Charger les conversations et l'historique des images au démarrage
   useEffect(() => {
     try {
+      // Charger les conversations
       const savedConversations = localStorage.getItem('tibot-conversations');
       const loadedConversations = savedConversations ? JSON.parse(savedConversations) : [];
       setConversations(loadedConversations);
@@ -81,15 +94,44 @@ const TiBotInterface = () => {
           handleNewChat();
         }
       }
+      
+      // Charger l'historique des images
+      const savedImageHistory = localStorage.getItem('tibot-image-history');
+      const loadedImageHistory = savedImageHistory ? JSON.parse(savedImageHistory) : [];
+      setImageHistory(loadedImageHistory);
+      
+      // Sélectionner la dernière génération d'images si elle existe
+      if (loadedImageHistory.length > 0) {
+        setCurrentImageHistoryId(loadedImageHistory[0].id);
+      }
 
       // Vérifier si l'onboarding a été complété
       const onboardingCompleted = localStorage.getItem('tibot-onboarding-completed');
       setShowOnboarding(!onboardingCompleted);
     } catch (error) {
-      console.error('Erreur lors du chargement des conversations:', error);
+      console.error('Erreur lors du chargement des données:', error);
       handleNewChat();
     }
   }, []);
+  
+  // Sauvegarder l'historique des images lorsqu'il change
+  useEffect(() => {
+    if (imageHistory && imageHistory.length > 0) {
+      try {
+        localStorage.setItem('tibot-image-history', JSON.stringify(imageHistory));
+        console.log('Historique des images sauvegardé:', imageHistory);
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'historique des images:', error);
+      }
+    }
+  }, [imageHistory]);
+  
+  // Déboguer les changements d'état pour l'historique des images
+  useEffect(() => {
+    console.log('Mode actif:', activeMode);
+    console.log('ID historique image actuel:', currentImageHistoryId);
+    console.log('Historique des images actuel:', imageHistory);
+  }, [activeMode, currentImageHistoryId, imageHistory]);
 
   // Charger une conversation existante
   const handleLoadConversation = (conversationId) => {
@@ -97,6 +139,81 @@ const TiBotInterface = () => {
     if (conversation) {
       setCurrentConversationId(conversationId);
       setMessages(conversation.messages || []);
+    }
+  };
+  
+  // Changer de mode
+  const handleModeChange = (modeId) => {
+    console.log(`Changement de mode: ${activeMode} -> ${modeId}`);
+    
+    // Sauvegarder l'état actuel avant de changer de mode
+    if (activeMode === 'chat' && currentConversationId) {
+      // Sauvegarder l'état de la conversation actuelle si nécessaire
+      try {
+        localStorage.setItem('tibot-conversations', JSON.stringify(conversations));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde des conversations:', error);
+      }
+    } else if (activeMode === 'image' && imageHistory.length > 0) {
+      // Sauvegarder l'état de l'historique des images
+      try {
+        localStorage.setItem('tibot-image-history', JSON.stringify(imageHistory));
+        console.log('Historique des images sauvegardé avant changement de mode:', imageHistory);
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'historique des images:', error);
+      }
+    }
+    
+    // Changer de mode
+    setActiveMode(modeId);
+    
+    // Charger l'historique approprié pour le nouveau mode
+    if (modeId === 'chat') {
+      // Charger la dernière conversation si elle existe
+      if (conversations.length > 0) {
+        handleLoadConversation(conversations[0].id);
+      }
+    } else if (modeId === 'image') {
+      try {
+        // Recharger l'historique des images depuis le localStorage
+        const savedImageHistory = localStorage.getItem('tibot-image-history');
+        console.log('Historique des images récupéré du localStorage:', savedImageHistory);
+        
+        if (savedImageHistory) {
+          const loadedImageHistory = JSON.parse(savedImageHistory);
+          console.log('Historique des images parsé:', loadedImageHistory);
+          
+          if (loadedImageHistory && loadedImageHistory.length > 0) {
+            // Mettre à jour l'état avec l'historique chargé
+            setImageHistory(loadedImageHistory);
+            
+            // Charger la dernière génération d'image
+            const latestEntry = loadedImageHistory[0];
+            console.log('Chargement de l\'entrée la plus récente:', latestEntry);
+            setCurrentImageHistoryId(latestEntry.id);
+            setImagePrompt(latestEntry.prompt || '');
+            setSelectedImageStyle(latestEntry.style || 'realistic');
+            setGeneratedImages(latestEntry.images || []);
+            return;
+          }
+        }
+        
+        // Si aucun historique n'est trouvé ou s'il est vide
+        console.log('Aucun historique d\'images trouvé ou historique vide');
+        setImageHistory([]);
+        setImagePrompt('');
+        setGeneratedImages([]);
+        setCurrentImageHistoryId(null);
+        setSelectedImageStyle('realistic');
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'historique des images:', error);
+        // Réinitialiser en cas d'erreur
+        setImageHistory([]);
+        setImagePrompt('');
+        setGeneratedImages([]);
+        setCurrentImageHistoryId(null);
+        setSelectedImageStyle('realistic');
+      }
     }
   };
 
@@ -143,13 +260,9 @@ const TiBotInterface = () => {
   ];
 
   const [imagePrompt, setImagePrompt] = useState('');
-  const [codePrompt, setCodePrompt] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('python');
+  const [selectedImageStyle, setSelectedImageStyle] = useState('realistic');
   const [generatedImages, setGeneratedImages] = useState([]);
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const [copied, setCopied] = useState(false);
+  const [imageError, setImageError] = useState(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [aiModel, setAiModel] = useState('tibot-base');
@@ -166,6 +279,42 @@ const TiBotInterface = () => {
       setSettingsSaved(false);
       setShowSettings(false);
     }, 1500);
+  };
+  
+  // Fonction pour générer du code avec l'API
+  const handleGenerateCode = async () => {
+    if (!codePrompt.trim()) {
+      return;
+    }
+    
+    setIsGenerating(true);
+    setCopied(false);
+    
+    try {
+      const response = await window.electron.code.generate(codePrompt, selectedLanguage, codeLevel);
+      
+      if (response.success) {
+        setGeneratedCode(response.data.code);
+      } else {
+        console.error('Erreur lors de la génération de code:', response.error);
+        // Afficher un message d'erreur à l'utilisateur
+        setGeneratedCode(`// Erreur: ${response.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la génération de code:', error);
+      setGeneratedCode(`// Erreur: ${error.message || 'Une erreur est survenue'}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  // Fonction pour copier le code généré
+  const handleCopyCode = () => {
+    if (generatedCode) {
+      navigator.clipboard.writeText(generatedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -278,7 +427,8 @@ const TiBotInterface = () => {
         const botMessage = {
           type: 'bot',
           content: response.data,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isNew: true // Marquer le message comme nouveau pour l'effet de frappe
         };
         
         // Ajouter la réponse du bot à la conversation
@@ -304,7 +454,8 @@ const TiBotInterface = () => {
       const errorMessage = {
         type: 'bot',
         content: t('errors.aiError'),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        isNew: true // Marquer le message d'erreur comme nouveau pour l'effet de frappe
       };
 
       // Ajouter le message d'erreur à la conversation
@@ -327,27 +478,182 @@ const TiBotInterface = () => {
     }
   };
 
-  const handleGenerateImage = () => {
-    if (imagePrompt.trim()) {
-      setIsGenerating(true);
-      setTimeout(() => {
-        setGeneratedImages([
-          { id: 1, url: 'https://via.placeholder.com/512x512/0891B2/FFFFFF?text=Lagon+Bleu' },
-          { id: 2, url: 'https://via.placeholder.com/512x512/FB923C/FFFFFF?text=Soleil+Tropical' },
-          { id: 3, url: 'https://via.placeholder.com/512x512/059669/FFFFFF?text=Forêt+Endémique' },
-          { id: 4, url: 'https://via.placeholder.com/512x512/DC2626/FFFFFF?text=Volcan+Actif' }
-        ]);
-        setIsGenerating(false);
-      }, 3000);
+  // Créer une nouvelle entrée dans l'historique des images
+  const handleNewImageGeneration = () => {
+    const newImageEntry = {
+      id: `img-${Date.now()}`,
+      title: imagePrompt.slice(0, 30) + (imagePrompt.length > 30 ? '...' : ''),
+      prompt: imagePrompt,
+      style: selectedImageStyle,
+      images: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Récupérer l'historique actuel du localStorage pour éviter les pertes de données
+    let currentHistory = [];
+    try {
+      const savedHistory = localStorage.getItem('tibot-image-history');
+      if (savedHistory) {
+        currentHistory = JSON.parse(savedHistory);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'historique des images:', error);
+    }
+    
+    // Fusionner avec l'historique en mémoire
+    const mergedHistory = [...imageHistory];
+    
+    // Vérifier si des entrées du localStorage ne sont pas dans l'historique en mémoire
+    currentHistory.forEach(savedEntry => {
+      if (!mergedHistory.some(entry => entry.id === savedEntry.id)) {
+        mergedHistory.push(savedEntry);
+      }
+    });
+    
+    // Ajouter la nouvelle entrée au début de l'historique
+    const updatedImageHistory = [newImageEntry, ...mergedHistory];
+    
+    // Mettre à jour l'état et le localStorage
+    setImageHistory(updatedImageHistory);
+    setCurrentImageHistoryId(newImageEntry.id);
+    setGeneratedImages([]);
+    
+    try {
+      localStorage.setItem('tibot-image-history', JSON.stringify(updatedImageHistory));
+      console.log('Nouvelle entrée ajoutée à l\'historique:', newImageEntry);
+      console.log('Historique complet après ajout:', updatedImageHistory);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de l\'historique des images:', error);
+    }
+    
+    return newImageEntry;
+  };
+  
+  // Charger une entrée existante de l'historique des images
+  const handleLoadImageHistory = (historyId) => {
+    const historyEntry = imageHistory.find(entry => entry.id === historyId);
+    if (historyEntry) {
+      setCurrentImageHistoryId(historyId);
+      setImagePrompt(historyEntry.prompt);
+      setSelectedImageStyle(historyEntry.style);
+      setGeneratedImages(historyEntry.images);
+    }
+  };
+  
+  // Supprimer une entrée de l'historique des images
+  const handleDeleteImageHistory = (historyId) => {
+    const updatedImageHistory = imageHistory.filter(entry => entry.id !== historyId);
+    setImageHistory(updatedImageHistory);
+    localStorage.setItem('tibot-image-history', JSON.stringify(updatedImageHistory));
+    
+    // Si l'entrée courante est supprimée
+    if (historyId === currentImageHistoryId) {
+      if (updatedImageHistory.length > 0) {
+        // Charger l'entrée la plus récente
+        handleLoadImageHistory(updatedImageHistory[0].id);
+      } else {
+        // Réinitialiser les champs
+        setCurrentImageHistoryId(null);
+        setImagePrompt('');
+        setGeneratedImages([]);
+      }
     }
   };
 
-  const handleGenerateCode = () => {
-    if (codePrompt.trim()) {
+  const handleGenerateImage = async () => {
+    if (imagePrompt.trim()) {
       setIsGenerating(true);
-      setTimeout(() => {
-        const codeExamples = {
-          python: `# Kalkil pou fé in bon kari poulet
+      setImageError(null);
+      
+      // Créer ou mettre à jour l'entrée dans l'historique
+      let currentEntry;
+      if (!currentImageHistoryId || imageHistory.find(entry => entry.id === currentImageHistoryId)?.prompt !== imagePrompt) {
+        // Créer une nouvelle entrée si le prompt a changé ou s'il n'y a pas d'entrée courante
+        currentEntry = handleNewImageGeneration();
+      } else {
+        // Utiliser l'entrée existante
+        currentEntry = imageHistory.find(entry => entry.id === currentImageHistoryId);
+      }
+      
+      try {
+        const response = await window.electron.stableDiffusion.generateImage(imagePrompt, selectedImageStyle);
+        
+        if (response.success) {
+          // Transformer les données reçues en format attendu par l'interface
+          const images = response.data.map(img => ({
+            id: img.id,
+            url: img.base64,
+            prompt: img.prompt,
+            style: img.style,
+            createdAt: img.createdAt
+          }));
+          
+          // Mettre à jour l'état local
+          setGeneratedImages(images);
+          
+          // Récupérer l'historique actuel du localStorage pour éviter les pertes de données
+          let currentHistory = [];
+          try {
+            const savedHistory = localStorage.getItem('tibot-image-history');
+            if (savedHistory) {
+              currentHistory = JSON.parse(savedHistory);
+            }
+          } catch (error) {
+            console.error('Erreur lors de la récupération de l\'historique des images:', error);
+          }
+          
+          // Fusionner avec l'historique en mémoire pour éviter de perdre des entrées
+          let mergedHistory = [...imageHistory];
+          
+          // Vérifier si des entrées du localStorage ne sont pas dans l'historique en mémoire
+          currentHistory.forEach(savedEntry => {
+            if (!mergedHistory.some(entry => entry.id === savedEntry.id)) {
+              mergedHistory.push(savedEntry);
+            }
+          });
+          
+          // Mettre à jour l'entrée actuelle avec les nouvelles images
+          const updatedImageHistory = mergedHistory.map(entry => {
+            if (entry.id === currentEntry.id) {
+              return {
+                ...entry,
+                images: images,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return entry;
+          });
+          
+          // Trier l'historique par date de mise à jour (plus récent en premier)
+          updatedImageHistory.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          
+          // Mettre à jour l'état local
+          setImageHistory(updatedImageHistory);
+          
+          // Sauvegarder dans le localStorage
+          try {
+            localStorage.setItem('tibot-image-history', JSON.stringify(updatedImageHistory));
+            console.log('Historique des images mis à jour après génération:', updatedImageHistory);
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde de l\'historique des images:', error);
+          }
+        } else {
+          throw new Error(response.error || 'Erreur lors de la génération de l\'image');
+        }
+      } catch (error) {
+        console.error('Erreur de génération d\'image:', error);
+        setImageError(error.message || 'Erreur lors de la génération de l\'image');
+      } finally {
+        setIsGenerating(false);
+      }
+    }
+  };
+
+  // Exemple de code pour les tests (utilisé uniquement si l'API n'est pas disponible)
+  const getExampleCode = (language) => {
+    const codeExamples = {
+      python: `# Kalkil pou fé in bon kari poulet
 def fe_kari_poulet(nb_moun):
     """Kalkil bann zingrédian pou in kari poulet"""
     poulet = nb_moun * 200  # 200g par moun
@@ -361,7 +667,7 @@ def fe_kari_poulet(nb_moun):
     print("- Epis: kurkuma, piman, lay, zanzib")
     
 fe_kari_poulet(6)`,
-          javascript: `// Fonksion pou kalkil bann zilé tropikal
+      javascript: `// Fonksion pou kalkil bann zilé tropikal
 function calculateIslandDistance(lat1, lon1, lat2, lon2) {
   // Formul Haversine pou kalkil distans
   const R = 6371; // Rayon la Ter en km
@@ -380,18 +686,11 @@ function calculateIslandDistance(lat1, lon1, lat2, lon2) {
 
 // Distans ant La Rénion ek Moris
 console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
-        };
-        setGeneratedCode(codeExamples[selectedLanguage] || codeExamples.python);
-        setIsGenerating(false);
-      }, 2000);
-    }
+    };
+    return codeExamples[language] || codeExamples.python;
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(generatedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // La fonction handleCopyCode est déjà définie plus haut dans le fichier
 
   const imageStyles = [
     { name: 'realistic', icon: '🌊', desc: t('imageStylesDesc.realistic') },
@@ -399,6 +698,10 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
     { name: 'tropical', icon: '🌺', desc: t('imageStylesDesc.tropical') },
     { name: 'fantasy', icon: '✨', desc: t('imageStylesDesc.fantasy') }
   ];
+  
+  const handleSelectImageStyle = (styleName) => {
+    setSelectedImageStyle(styleName);
+  };
 
   const codeExamples = [
     { lang: 'python', name: t('codeExamples.python') },
@@ -491,7 +794,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
             {modes.map(mode => (
               <button
                 key={mode.id}
-                onClick={() => setActiveMode(mode.id)}
+                onClick={() => handleModeChange(mode.id)}
                 className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all transform hover:scale-105 ${
                   activeMode === mode.id 
                     ? darkMode 
@@ -518,42 +821,122 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
 
           <div className="flex-1 px-4 py-3 overflow-y-auto">
-            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              {t('history')}
-            </p>
-            <div className="space-y-1">
-              {conversations.map((conversation) => (
-                <div 
-                  key={conversation.id}
-                  className={`group flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:translate-x-1 ${
-                    currentConversationId === conversation.id
-                      ? darkMode 
-                        ? 'bg-gray-700 text-gray-100'
-                        : 'bg-gray-100 text-gray-900'
-                      : darkMode 
-                        ? 'text-gray-300 hover:bg-gray-700' 
-                        : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+            <div className="flex items-center justify-between mb-3">
+              <p className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                {t('history')}
+              </p>
+              
+              {/* Bouton Nouvelle conversation (mode chat) */}
+              {activeMode === 'chat' && (
+                <button
+                  onClick={handleNewChat}
+                  className={`flex items-center space-x-1 text-xs px-2 py-1 rounded transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
-                  <button 
-                    onClick={() => handleLoadConversation(conversation.id)}
-                    className="flex-1 text-left truncate"
-                  >
-                    {conversation.title}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteConversation(conversation.id)}
-                    className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity ${
-                      darkMode 
-                        ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' 
-                        : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                  <Plus className="w-3 h-3" />
+                  <span>{t('newChat')}</span>
+                </button>
+              )}
+              
+              {/* Bouton Nouvelle image (mode image) */}
+              {activeMode === 'image' && (
+                <button
+                  onClick={() => {
+                    // Réinitialiser les champs pour une nouvelle image
+                    setImagePrompt('');
+                    setSelectedImageStyle('realistic'); // Réinitialiser le style par défaut
+                    setGeneratedImages([]);
+                    setCurrentImageHistoryId(null);
+                    setImageError(null);
+                  }}
+                  className={`flex items-center space-x-1 text-xs px-2 py-1 rounded transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{t('newImage')}</span>
+                </button>
+              )}
+            </div>
+            
+            {/* Historique des conversations (mode chat) */}
+            {activeMode === 'chat' && (
+              <div className="space-y-1">
+                {conversations.map((conversation) => (
+                  <div 
+                    key={conversation.id}
+                    className={`group flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:translate-x-1 ${
+                      currentConversationId === conversation.id
+                        ? darkMode 
+                          ? 'bg-gray-700 text-gray-100'
+                          : 'bg-gray-100 text-gray-900'
+                        : darkMode 
+                          ? 'text-gray-300 hover:bg-gray-700' 
+                          : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <button 
+                      onClick={() => handleLoadConversation(conversation.id)}
+                      className="flex-1 text-left truncate"
+                    >
+                      {conversation.title}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteConversation(conversation.id)}
+                      className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity ${
+                        darkMode 
+                          ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' 
+                          : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Historique des images (mode image) */}
+            {activeMode === 'image' && (
+              <div className="space-y-1">
+                {imageHistory.map((entry) => (
+                  <div 
+                    key={entry.id}
+                    className={`group flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm transition-all hover:translate-x-1 ${
+                      currentImageHistoryId === entry.id
+                        ? darkMode 
+                          ? 'bg-gray-700 text-gray-100'
+                          : 'bg-gray-100 text-gray-900'
+                        : darkMode 
+                          ? 'text-gray-300 hover:bg-gray-700' 
+                          : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <button 
+                      onClick={() => handleLoadImageHistory(entry.id)}
+                      className="flex-1 text-left truncate"
+                    >
+                      {entry.title}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteImageHistory(entry.id)}
+                      className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity ${
+                        darkMode 
+                          ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' 
+                          : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Message si aucun historique n'est disponible */}
+            {((activeMode === 'chat' && conversations.length === 0) || 
+              (activeMode === 'image' && imageHistory.length === 0)) && (
+              <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className="text-sm">{t('noHistory')}</p>
+              </div>
+            )}
           </div>
 
           <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
@@ -718,6 +1101,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                                 <TypingEffect 
                                   content={message.content}
                                   className={message.type === 'bot' ? '' : 'text-white'}
+                                  isNew={message.isNew || false}
                                 />
                               ) : (
                                 <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -784,8 +1168,15 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                       {imageStyles.map((style) => (
                         <button 
                           key={style.name}
+                          onClick={() => handleSelectImageStyle(style.name)}
                           className={`px-3 py-1.5 rounded-lg text-sm flex items-center space-x-1 transition-all hover:scale-105 ${
-                            darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            selectedImageStyle === style.name
+                              ? darkMode 
+                                ? 'bg-orange-600 text-white' 
+                                : 'bg-orange-500 text-white'
+                              : darkMode 
+                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                           }`}
                           title={style.desc}
                         >
@@ -818,13 +1209,33 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                   </div>
                 </div>
 
-                {generatedImages.length === 0 && !isGenerating && (
+                {generatedImages.length === 0 && !isGenerating && !imageError && (
                   <div className={`text-center py-12 animate-fadeIn ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
                       <Image className="w-8 h-8 text-orange-500" />
                     </div>
                     <p className="text-lg mb-2">{t('empty.images')}</p>
                     <p className="text-sm">{t('empty.imagesDesc')}</p>
+                  </div>
+                )}
+                
+                {imageError && (
+                  <div className={`text-center py-8 animate-fadeIn ${darkMode ? 'bg-red-900/20' : 'bg-red-50'} rounded-xl p-6`}>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                      <X className="w-8 h-8 text-red-500" />
+                    </div>
+                    <p className={`text-lg mb-2 font-medium ${darkMode ? 'text-red-300' : 'text-red-600'}`}>
+                      {t('errors.imageGenerationFailed')}
+                    </p>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {imageError}
+                    </p>
+                    <button
+                      onClick={() => setImageError(null)}
+                      className={`mt-4 px-4 py-2 rounded-lg font-medium transition-all transform hover:scale-105 ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      {t('tryAgain')}
+                    </button>
                   </div>
                 )}
 
@@ -841,17 +1252,28 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                         <div className="aspect-square bg-gradient-to-br from-cyan-100 to-orange-100 relative group">
                           <img src={img.url} alt={`Generated ${index + 1}`} className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center space-x-2 opacity-0 group-hover:opacity-100">
-                            <button className="p-2 bg-white rounded-lg shadow-lg transform hover:scale-110 transition-all">
+                            <button 
+                              className="p-2 bg-white rounded-lg shadow-lg transform hover:scale-110 transition-all"
+                              title={t('downloadImage')}
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = img.url;
+                                link.download = `tibot_image_${Date.now()}.png`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                            >
                               <Download className="w-5 h-5 text-gray-700" />
-                            </button>
-                            <button className="p-2 bg-white rounded-lg shadow-lg transform hover:scale-110 transition-all">
-                              <Wand2 className="w-5 h-5 text-gray-700" />
                             </button>
                           </div>
                         </div>
                         <div className="p-4">
-                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            Varyasion #{index + 1}
+                          <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {t('variation')} #{index + 1}
+                          </p>
+                          <p className={`text-xs truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} title={img.prompt}>
+                            {img.prompt.length > 50 ? img.prompt.substring(0, 50) + '...' : img.prompt}
                           </p>
                         </div>
                       </div>
@@ -932,14 +1354,24 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center space-x-2 text-sm">
                       <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{t('codeLevel')}:</span>
-                      <button className={`px-3 py-1 rounded-lg transition-all hover:scale-105 ${
-                        darkMode ? 'bg-emerald-900 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
-                      }`}>
+                      <button 
+                        onClick={() => setCodeLevel('beginner')}
+                        className={`px-3 py-1 rounded-lg transition-all hover:scale-105 ${
+                          codeLevel === 'beginner'
+                            ? (darkMode ? 'bg-emerald-900 text-emerald-300' : 'bg-emerald-100 text-emerald-700')
+                            : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700')
+                        }`}
+                      >
                         {t('codeLevels.beginner')}
                       </button>
-                      <button className={`px-3 py-1 rounded-lg transition-all hover:scale-105 ${
-                        darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                      }`}>
+                      <button 
+                        onClick={() => setCodeLevel('advanced')}
+                        className={`px-3 py-1 rounded-lg transition-all hover:scale-105 ${
+                          codeLevel === 'advanced'
+                            ? (darkMode ? 'bg-emerald-900 text-emerald-300' : 'bg-emerald-100 text-emerald-700')
+                            : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700')
+                        }`}
+                      >
                         {t('codeLevels.advanced')}
                       </button>
                     </div>
@@ -1003,15 +1435,21 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                         </div>
                         <span className="text-gray-400 text-sm font-mono">{selectedLanguage}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center">
                         <button 
                           onClick={handleCopyCode}
-                          className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                          className="px-3 py-1.5 rounded-lg flex items-center space-x-1.5 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
                         >
-                          {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                        <button className="p-1.5 text-gray-400 hover:text-white transition-colors">
-                          <Download className="w-4 h-4" />
+                          {copied ? 
+                            <>
+                              <Check className="w-4 h-4 text-green-400" />
+                              <span className="text-xs">Copié</span>
+                            </> : 
+                            <>
+                              <Copy className="w-4 h-4" />
+                              <span className="text-xs">Copier</span>
+                            </>
+                          }
                         </button>
                       </div>
                     </div>

@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.0.5] - 2025-05-24
+
+### Ajouts
+- Serveur API intermédiaire pour sécuriser les clés API
+- Génération d'images avec différents styles (réaliste, artistique, tropical, fantaisie)
+- Historique des images générées avec sauvegarde dans localStorage
+
+### Améliorations
+- Meilleure gestion des erreurs avec messages conviviaux
+- Support de plusieurs modèles Stable Diffusion pour plus de fiabilité
+- Optimisation du chargement des variables d'environnement
+- Logs détaillés pour faciliter le débogage
+- Amélioration du formatage des réponses en mode discussion (titres, sous-titres, émojis)
+- Utilisation du modèle Mistral Medium pour des réponses plus riches et structurées
+
+### Corrections
+- Résolution du problème de connexion au serveur IA en mode discussion
+- Correction de la persistance de l'historique des images lors du changement de mode
+- Résolution des problèmes avec l'API Stability AI
+- Correction du bug d'affichage des messages précédents lors du changement de mode (effet de frappe)
+
 ## [1.0.4] - 2024-03-27
 
 ### Améliorations
