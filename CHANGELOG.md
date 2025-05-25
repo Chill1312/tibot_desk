@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.2.2] - 2025-05-25
+
+### Nouvelles fonctionnalités
+- Ajout d'un sélecteur de modèle d'IA pour le mode discussion
+  - Interface de sélection intuitive pour choisir entre différents modèles
+  - Support initial pour Mistral 7B (fine-tuné pour comprendre le créole et le français)
+  - Préparation pour les futurs modèles Pro (plus puissant) et Expert (spécialisé technique)
+  - Architecture extensible pour ajouter facilement de nouveaux modèles à l'avenir
+
+### Améliorations
+- Ajout de raccourcis clavier pour une navigation plus rapide
+  - Ctrl+N : Nouvelle conversation
+  - Ctrl+1/2/3 : Basculer entre les modes (discussion, image, code)
+  - Ctrl+H : Afficher/masquer l'historique avancé
+  - Ctrl+/ : Afficher l'aide des raccourcis clavier
+  - Ctrl+D : Basculer entre mode sombre et clair
+  - Escape : Fermer les fenêtres modales
+- Transformation de l'historique avancé en page dédiée complète
+  - Interface similaire à ChatGPT avec filtres et recherche
+  - Tri par date et options de filtrage améliorées
+
+### Corrections
+- Correction des problèmes d'interface
+  - Suppression du bouton dupliqué pour ouvrir/fermer la sidebar
+  - Correction de l'écart entre la sidebar et le contenu principal
+  - Restauration de la fonctionnalité de redimensionnement de la sidebar
+- Ajout des traductions manquantes
+  - Traduction du bouton "Personnaliser" et du menu de personnalisation
+  - Traduction du bouton "Raccourcis clavier"
+  - Mise à jour de la version affichée dans les paramètres (1.2.1 → 1.2.2)
+
 ## [1.2.1] - 2025-05-25
 
 ### Améliorations

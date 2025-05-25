@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Image, Code, Settings, Menu, X, Send, Sparkles, User, Bot, Home, History, Plus, Moon, Sun, Download, Copy, Palette, Wand2, RefreshCw, Check, Terminal, Globe, Cpu, Save, Bell, Database, Type, Shield, HelpCircle, LogOut, Trash2, UserCircle } from 'lucide-react';
+import { MessageCircle, Image, Code, Settings, Menu, X, Send, Sparkles, User, Bot, Home, History, Plus, Moon, Sun, Download, Copy, Palette, Wand2, RefreshCw, Check, Terminal, Globe, Cpu, Save, Bell, Database, Type, Shield, HelpCircle, LogOut, Trash2, UserCircle, Search, List, Keyboard, ChevronDown } from 'lucide-react';
 import PersonalizationPanel from './components/PersonalizationPanel';
+import ModelSelector from './components/ModelSelector';
 import logoImage from '../assets/logo.png';
 import UpdateNotification from './components/UpdateNotification';
 import TypingEffect from './components/TypingEffect';
@@ -9,6 +10,7 @@ import TitleBar from './components/TitleBar';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 import PromptMenu from './components/PromptMenu';
+import ShortcutsHelpModal from './components/ShortcutsHelpModal';
 
 const TiBotInterface = () => {
   const { t, i18n } = useTranslation();
@@ -21,6 +23,13 @@ const TiBotInterface = () => {
   const [messages, setMessages] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
+  const [showAdvancedHistory, setShowAdvancedHistory] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  
+  // Référence pour la sidebar et état pour le redimensionnement
+  const sidebarRef = useRef(null);
+  const [sidebarWidth, setSidebarWidth] = useState(250);
+  const [isResizing, setIsResizing] = useState(false);
   
   // États pour l'historique des images
   const [imageHistory, setImageHistory] = useState([]);
@@ -36,6 +45,8 @@ const TiBotInterface = () => {
   // États pour la personnalisation
   const [showPersonalization, setShowPersonalization] = useState(false);
   const [personalization, setPersonalization] = useState({});
+  
+  // État pour le sélecteur de modèle
   // Référence au conteneur de messages pour le défilement automatique
   const messagesContainerRef = useRef(null);
   
@@ -243,10 +254,11 @@ const TiBotInterface = () => {
       setCurrentConversationId(conversationId);
       
       // S'assurer que tous les messages chargés depuis l'historique ont isNew = false
-      // pour éviter que l'effet de frappe ne s'applique à chaque rechargement
+      // et qu'ils ont tous un modèle assigné (pour la compatibilité avec les anciennes conversations)
       const messagesWithoutTypingEffect = (conversation.messages || []).map(message => ({
         ...message,
-        isNew: false // Forcer isNew à false pour tous les messages chargés depuis l'historique
+        isNew: false, // Forcer isNew à false pour tous les messages chargés depuis l'historique
+        model: message.model || 'mistral-7b' // Ajouter le modèle par défaut si non présent
       }));
       
       setMessages(messagesWithoutTypingEffect);
@@ -395,6 +407,7 @@ const TiBotInterface = () => {
     }, 1500);
   };
   
+  
   // Fonction pour générer du code avec l'API
   const handleGenerateCode = async () => {
     if (!codePrompt.trim()) {
@@ -521,6 +534,16 @@ const TiBotInterface = () => {
     console.log('Onboarding forcé pour le test');
   }, []);
 
+  const [selectedModel, setSelectedModel] = useState('tibot-base');
+
+  // Gestionnaire pour changer de modèle d'IA
+  const handleModelChange = (modelId) => {
+    setSelectedModel(modelId);
+    // Ici, vous pourriez ajouter du code pour adapter le comportement de l'application
+    // en fonction du modèle sélectionné, comme modifier les paramètres d'API
+    console.log(`Modèle changé pour: ${modelId}`);
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -528,7 +551,8 @@ const TiBotInterface = () => {
       const userMessage = {
         type: 'user',
         content: inputValue,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        model: selectedModel, // Ajouter le modèle utilisé pour cette conversation
       };
 
       // Ajouter le message à la conversation actuelle
@@ -550,13 +574,18 @@ const TiBotInterface = () => {
       setInputValue('');
       setIsTyping(true);
 
-      // Inclure les informations de personnalisation dans la requête
-      const response = await window.electron.mistral.chat(inputValue, language, personalization);
-      
-      if (response.success) {
+      // Inclure les informations de personnalisation
+      const mistralResponse = await window.electron.invoke('mistral:chat', {
+        message: inputValue,
+        language,
+        personalization,
+        model: selectedModel // Inclure le modèle sélectionné
+      });
+
+      if (mistralResponse.success) {
         const botMessage = {
           type: 'bot',
-          content: response.data,
+          content: mistralResponse.data,
           timestamp: new Date().toISOString(),
           isNew: true // Marquer le message comme nouveau pour l'effet de frappe
         };
@@ -900,21 +929,158 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
   };
 
   const [isPromptMenuOpen, setIsPromptMenuOpen] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
 
   const handlePromptSelect = (promptText) => {
     setInputValue(promptText);
   };
+  
+  // Gestionnaire pour fermer les menus lors d'un clic à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Fermer le menu de modèle si on clique ailleurs
+      if (modelMenuOpen && !event.target.closest('.model-selector-container')) {
+        setModelMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [modelMenuOpen]);
+  
+  // Gestionnaire de raccourcis clavier simple
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignorer les événements si l'utilisateur est en train de saisir du texte
+      if (
+        e.target.tagName === 'INPUT' || 
+        e.target.tagName === 'TEXTAREA' || 
+        e.target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Raccourcis avec Ctrl
+      if (e.ctrlKey) {
+        switch (e.key.toLowerCase()) {
+          case 'n': // Nouvelle conversation
+            e.preventDefault();
+            handleNewChat();
+            break;
+          case 'h': // Afficher/masquer l'historique avancé
+            e.preventDefault();
+            setShowAdvancedHistory(!showAdvancedHistory);
+            break;
+          case '1': // Mode discussion
+            e.preventDefault();
+            handleModeChange('chat');
+            break;
+          case '2': // Mode image
+            e.preventDefault();
+            handleModeChange('image');
+            break;
+          case '3': // Mode code
+            e.preventDefault();
+            handleModeChange('code');
+            break;
+          case 'd': // Basculer mode sombre/clair
+            e.preventDefault();
+            setDarkMode(!darkMode);
+            break;
+          case ',': // Ouvrir les paramètres
+            e.preventDefault();
+            setShowSettings(true);
+            break;
+          case 'p': // Ouvrir la personnalisation
+            e.preventDefault();
+            setShowPersonalization(true);
+            break;
+          case '/': // Afficher l'aide des raccourcis
+            e.preventDefault();
+            setShowShortcutsHelp(true);
+            break;
+          case 'enter': // Envoyer message
+            e.preventDefault();
+            if (activeMode === 'chat' && inputValue.trim()) {
+              handleSendMessage();
+            } else if (activeMode === 'image' && imagePrompt.trim()) {
+              handleGenerateImage();
+            } else if (activeMode === 'code' && codePrompt.trim()) {
+              handleGenerateCode();
+            }
+            break;
+          default:
+            break;
+        }
+      }
+      
+      // Touche Escape pour fermer les modales
+      if (e.key === 'Escape') {
+        setShowSettings(false);
+        setShowPersonalization(false);
+        setIsPromptMenuOpen(false);
+        setShowShortcutsHelp(false);
+      }
+    };
+
+    // Ajouter l'écouteur d'événement
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Nettoyer l'écouteur d'événement
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeMode, darkMode, inputValue, imagePrompt, codePrompt, showAdvancedHistory]);
+  
+  // Gestionnaire de redimensionnement de la sidebar
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth > 200 && newWidth < 400) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   return (
     <div className={`h-screen flex flex-col ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <TitleBar darkMode={darkMode} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
-        <div className={`fixed top-8 left-0 h-[calc(100vh-2rem)] w-64 transition-transform duration-300 transform ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-64'
-        } ${darkMode ? 'bg-gray-800' : 'bg-white'} border-r ${
-          darkMode ? 'border-gray-700' : 'border-gray-200'
-        } flex flex-col z-10`}>
+        <div 
+          ref={sidebarRef}
+          style={{ width: sidebarOpen ? `${sidebarWidth}px` : '0px', overflow: sidebarOpen ? 'visible' : 'hidden' }}
+          className={`absolute top-0 left-0 h-full transition-all duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'} border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col z-10`}
+        >
+          {/* Barre de redimensionnement */}
+          {sidebarOpen && (
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-cyan-500"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsResizing(true);
+                document.body.style.cursor = 'ew-resize';
+              }}
+            />
+          )}
           <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
             <div className="flex items-center space-x-3">
               <img 
@@ -942,14 +1108,14 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                 title="Personnaliser Ti'Bot"
               >
                 <UserCircle className="w-3 h-3" />
-                <span>Personnaliser</span>
+                <span>{t('customize')}</span>
               </button>
             </div>
             {modes.map(mode => (
               <button
                 key={mode.id}
                 onClick={() => handleModeChange(mode.id)}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all transform hover:scale-105 ${
+                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all hover:translate-x-1 ${
                   activeMode === mode.id 
                     ? darkMode 
                       ? 'bg-gradient-to-r from-gray-700 to-gray-600 border border-gray-600' 
@@ -976,20 +1142,27 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
 
           <div className="flex-1 px-4 py-3 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
-              <p className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                {t('history')}
-              </p>
+              <div className="flex items-center space-x-2">
+                <p className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {t('history')}
+                </p>
+                {/* Bouton pour basculer entre l'historique simple et avancé (mode chat uniquement) */}
+                {activeMode === 'chat' && (
+                  <button
+                    onClick={() => setShowAdvancedHistory(!showAdvancedHistory)}
+                    className={`p-1 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+                    title={showAdvancedHistory ? t('simpleHistory') : t('advancedHistory')}
+                  >
+                    {showAdvancedHistory ? (
+                      <List className="w-3.5 h-3.5" />
+                    ) : (
+                      <Search className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                )}
+              </div>
               
-              {/* Bouton Nouvelle conversation (mode chat) */}
-              {activeMode === 'chat' && (
-                <button
-                  onClick={handleNewChat}
-                  className={`flex items-center space-x-1 text-xs px-2 py-1 rounded transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>{t('newChat')}</span>
-                </button>
-              )}
+              {/* Aucun bouton ici - le bouton Nouvelle conversation a été supprimé */}
               
               {/* Bouton Nouvelle image (mode image) */}
               {activeMode === 'image' && (
@@ -1011,7 +1184,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
             </div>
             
             {/* Historique des conversations (mode chat) */}
-            {activeMode === 'chat' && (
+            {activeMode === 'chat' && !showAdvancedHistory && (
               <div className="space-y-1">
                 {conversations.map((conversation) => (
                   <div 
@@ -1042,6 +1215,59 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Historique avancé des conversations (mode chat) */}
+            {activeMode === 'chat' && showAdvancedHistory && (
+              <div className="space-y-2 p-2 bg-gray-700/30 rounded-lg">
+                <div className={`flex items-center px-3 py-2 rounded-lg mb-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <Search className="w-4 h-4 mr-2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={t('searchConversations')}
+                    className={`w-full bg-transparent border-none focus:outline-none ${darkMode ? 'text-gray-200 placeholder-gray-500' : 'text-gray-700 placeholder-gray-400'}`}
+                  />
+                </div>
+                
+                <div className="flex space-x-1 mb-2 overflow-x-auto pb-1">
+                  <button className={`px-2 py-1 text-xs rounded-md whitespace-nowrap ${darkMode ? 'bg-cyan-600 text-white' : 'bg-cyan-100 text-cyan-800'}`}>
+                    {t('allTime')}
+                  </button>
+                  <button className={`px-2 py-1 text-xs rounded-md whitespace-nowrap ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {t('today')}
+                  </button>
+                  <button className={`px-2 py-1 text-xs rounded-md whitespace-nowrap ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {t('thisWeek')}
+                  </button>
+                  <button className={`px-2 py-1 text-xs rounded-md whitespace-nowrap ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {t('thisMonth')}
+                  </button>
+                </div>
+                
+                {conversations.map((conversation) => (
+                  <div 
+                    key={conversation.id}
+                    className={`group p-2 rounded-lg transition-all hover:translate-x-1 ${currentConversationId === conversation.id ? darkMode ? 'bg-gray-700' : 'bg-gray-100' : darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <button 
+                        onClick={() => handleLoadConversation(conversation.id)}
+                        className="flex-1 text-left truncate"
+                      >
+                        <span className={`font-medium text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                          {conversation.title}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteConversation(conversation.id)}
+                        className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-opacity ${darkMode ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1094,6 +1320,18 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
 
           <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+            <button
+              onClick={() => setShowShortcutsHelp(true)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all hover:translate-x-1 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
+            >
+              <div className="flex items-center space-x-3">
+                <Keyboard className="w-4 h-4 text-cyan-400" />
+                <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
+                  {t('keyboardShortcuts')}
+                </span>
+              </div>
+              <kbd className={`px-1.5 py-0.5 text-xs rounded ${darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>Ctrl+/</kbd>
+            </button>
             <button 
               onClick={() => setShowSettings(true)}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-all hover:translate-x-1 ${
@@ -1106,8 +1344,20 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           </div>
         </div>
 
-        {/* Main content */}
-        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
+        {/* Bouton pour ouvrir/fermer la sidebar (visible uniquement quand la sidebar est fermée) */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className={`fixed top-8 left-0 z-20 p-2 rounded-r-md transition-all transform translate-x-0 ${darkMode ? 'bg-gray-800 text-gray-400 hover:text-gray-300' : 'bg-white text-gray-600 hover:text-gray-800'} ${
+              darkMode ? 'border-gray-700' : 'border-gray-200'
+            } border-t border-r border-b`}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Contenu principal */}
+        <div className="flex-1 flex flex-col w-full" style={{ marginLeft: sidebarOpen ? `${sidebarWidth}px` : '0px', transition: 'margin-left 0.3s ease' }}>
           <header className={`border-b px-4 py-3 transition-colors ${
             darkMode 
               ? 'bg-gray-800 border-gray-700' 
@@ -1115,17 +1365,16 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className={`p-2 rounded-lg transition-all hover:scale-110 ${
-                    darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  {sidebarOpen ? 
-                    <X className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} /> : 
-                    <Menu className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
-                  }
-                </button>
+                {sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    className={`p-2 rounded-lg transition-all hover:scale-110 ${
+                      darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <X className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+                  </button>
+                )}
                 <div className="flex items-center space-x-2">
                   {activeMode === 'chat' && <MessageCircle className={`w-5 h-5 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />}
                   {activeMode === 'image' && <Image className={`w-5 h-5 ${darkMode ? 'text-orange-400' : 'text-orange-500'}`} />}
@@ -1175,7 +1424,107 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                               : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
                           }`}
                         />
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                          <div className="relative model-selector-container">
+                            <button 
+                              onClick={() => setModelMenuOpen(!modelMenuOpen)}
+                              className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg transition-all border shadow-sm hover:shadow ${
+                                darkMode 
+                                  ? 'bg-gray-700 hover:bg-gray-600 text-cyan-300 border-gray-600' 
+                                  : 'bg-gray-100 hover:bg-gray-200 text-cyan-600 border-gray-300'
+                              }`}
+                              title={t('modelSelector.change')}
+                            >
+                              <span className="text-lg">🧠</span>
+                              <span className="text-xs font-medium">AI</span>
+                              <ChevronDown className={`w-3 h-3 transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {modelMenuOpen && (
+                              <div 
+                                className={`absolute top-full mt-1 left-0 w-64 rounded-lg shadow-lg overflow-hidden z-50 animate-slideDown ${
+                                  darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+                                }`}
+                              >
+                                {/* Petit triangle pour l'effet bulle */}
+                                <div 
+                                  className={`absolute top-[-8px] border-t border-l
+                                    left-4 w-4 h-4 transform rotate-45
+                                    ${darkMode ? 'bg-gray-800' : 'bg-white'}
+                                    ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                                />
+                                <div className={`p-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                  <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {t('modelSelector.title')}
+                                  </p>
+                                </div>
+                                <div className="p-1">
+                                  {[
+                                    {
+                                      id: 'mistral-7b',
+                                      name: t('models.base.name'),
+                                      description: t('models.base.desc'),
+                                      icon: '🧠',
+                                      color: 'text-cyan-500'
+                                    },
+                                    {
+                                      id: 'mistral-large',
+                                      name: t('models.pro.name'),
+                                      description: t('models.pro.desc'),
+                                      icon: '🚀',
+                                      color: 'text-purple-500',
+                                      disabled: true
+                                    },
+                                    {
+                                      id: 'mistral-expert',
+                                      name: t('models.expert.name'),
+                                      description: t('models.expert.desc'),
+                                      icon: '💻',
+                                      color: 'text-emerald-500',
+                                      disabled: true
+                                    }
+                                  ].map(model => (
+                                    <button
+                                      key={model.id}
+                                      onClick={() => {
+                                        if (!model.disabled) {
+                                          handleModelChange(model.id);
+                                          setModelMenuOpen(false);
+                                        }
+                                      }}
+                                      disabled={model.disabled}
+                                      className={`w-full flex items-start p-2 rounded-md transition-colors ${
+                                        model.id === selectedModel
+                                          ? darkMode 
+                                            ? 'bg-gray-700' 
+                                            : 'bg-gray-100'
+                                          : darkMode
+                                            ? 'hover:bg-gray-700'
+                                            : 'hover:bg-gray-100'
+                                      } ${
+                                        model.disabled 
+                                          ? 'opacity-50 cursor-not-allowed' 
+                                          : 'cursor-pointer'
+                                      }`}
+                                    >
+                                      <div className="flex-shrink-0 text-xl mr-2">{model.icon}</div>
+                                      <div className="flex-1 text-left">
+                                        <div className="flex items-center">
+                                          <span className={`font-medium ${model.color}`}>{model.name}</span>
+                                          {model.id === selectedModel && (
+                                            <Check className="w-4 h-4 ml-1 text-cyan-500" />
+                                          )}
+                                        </div>
+                                        <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                          {model.description}
+                                        </p>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           <div className="relative">
                             <button 
                               onClick={() => setIsPromptMenuOpen(!isPromptMenuOpen)}
@@ -1644,7 +1993,114 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
                           : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
                       }`}
                     />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                      <div className="relative model-selector-container">
+                        <button 
+                          onClick={() => setModelMenuOpen(!modelMenuOpen)}
+                          className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg transition-all border shadow-sm hover:shadow ${
+                            darkMode 
+                              ? 'bg-gray-700 hover:bg-gray-600 text-cyan-300 border-gray-600' 
+                              : 'bg-gray-100 hover:bg-gray-200 text-cyan-600 border-gray-300'
+                          }`}
+                          title={t('modelSelector.change')}
+                        >
+                          <span className="text-lg">🧠</span>
+                          <span className="text-xs font-medium">AI</span>
+                          <ChevronDown className={`w-3 h-3 transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {modelMenuOpen && (
+                          <div 
+                            className={`absolute bottom-full mb-1 left-0 w-64 rounded-lg shadow-lg overflow-hidden z-50 animate-slideUp ${
+                              darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+                            }`}
+                          >
+                            {/* Petit triangle pour l'effet bulle */}
+                            <div 
+                              className={`absolute bottom-[-8px] border-b border-r
+                                left-4 w-4 h-4 transform rotate-45
+                                ${darkMode ? 'bg-gray-800' : 'bg-white'}
+                                ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                            />
+                            <div className={`p-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                              <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {t('modelSelector.title')}
+                              </p>
+                            </div>
+                            <div className="p-1">
+                              {[
+                                {
+                                  id: 'mistral-7b',
+                                  name: t('models.base.name'),
+                                  description: t('models.base.desc'),
+                                  icon: '🧠',
+                                  color: 'text-cyan-500'
+                                },
+                                {
+                                  id: 'mistral-large',
+                                  name: t('models.pro.name'),
+                                  description: t('models.pro.desc'),
+                                  icon: '🚀',
+                                  color: 'text-purple-500',
+                                  disabled: true
+                                },
+                                {
+                                  id: 'mistral-creative',
+                                  name: t('models.creative.name'),
+                                  description: t('models.creative.desc'),
+                                  icon: '✨',
+                                  color: 'text-orange-500',
+                                  disabled: true
+                                }
+                              ].map(model => (
+                                <button
+                                  key={model.id}
+                                  onClick={() => {
+                                    if (!model.disabled) {
+                                      handleModelChange(model.id);
+                                      setModelMenuOpen(false);
+                                    }
+                                  }}
+                                  disabled={model.disabled}
+                                  className={`w-full flex items-start p-2 rounded-md transition-colors ${
+                                    model.id === selectedModel
+                                      ? darkMode 
+                                        ? 'bg-gray-700' 
+                                        : 'bg-gray-100'
+                                      : darkMode
+                                        ? 'hover:bg-gray-700'
+                                        : 'hover:bg-gray-100'
+                                  } ${
+                                    model.disabled 
+                                      ? 'opacity-50 cursor-not-allowed' 
+                                      : 'cursor-pointer'
+                                  }`}
+                                >
+                                  <div className="flex-shrink-0 text-xl mr-2">{model.icon}</div>
+                                  <div className="flex-1 text-left">
+                                    <div className="flex items-center justify-between">
+                                      <p className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                                        {model.name}
+                                      </p>
+                                      {model.id === selectedModel && (
+                                        <Check className={`w-4 h-4 ${model.color}`} />
+                                      )}
+                                    </div>
+                                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      {model.description}
+                                    </p>
+                                    {model.disabled && (
+                                      <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                        {t('modelSelector.comingSoon')}
+                                      </p>
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="relative">
                         <button 
                           onClick={() => setIsPromptMenuOpen(!isPromptMenuOpen)}
@@ -1951,7 +2407,7 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
               <div className="flex items-center justify-between">
                 <div className="flex flex-col items-start">
                   <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Version 1.2.0
+                    Version 1.2.1
                   </span>
                   <button 
                     onClick={resetOnboarding}
@@ -1998,6 +2454,153 @@ console.log(calculateIslandDistance(-21.1151, 55.5364, -20.3484, 57.5522));`
         setPersonalization={setPersonalization}
         onSave={handleSavePersonalization}
       />
+      
+      <PromptMenu
+        isOpen={isPromptMenuOpen}
+        onClose={() => setIsPromptMenuOpen(false)}
+        onSelect={handlePromptSelect}
+        darkMode={darkMode}
+      />
+      
+      {/* Modal d'aide pour les raccourcis clavier */}
+      <ShortcutsHelpModal
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+        darkMode={darkMode}
+      />
+      
+      {/* Page dédiée pour l'historique avancé */}
+      {showAdvancedHistory && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-opacity-100 overflow-hidden" style={{ backgroundColor: darkMode ? '#1f2937' : '#f9fafb' }}>
+          <div className={`p-4 flex items-center justify-between border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+            <div className="flex items-center space-x-3">
+              <History className={`w-5 h-5 ${darkMode ? 'text-cyan-400' : 'text-cyan-500'}`} />
+              <h2 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {t('advancedHistory.title')}
+              </h2>
+            </div>
+            <button
+              onClick={() => setShowAdvancedHistory(false)}
+              className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="flex flex-1 overflow-hidden">
+            {/* Filtres et recherche */}
+            <div className={`w-64 p-4 border-r ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+              <div className="mb-6">
+                <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {t('advancedHistory.search')}
+                </h3>
+                <div className={`flex items-center px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <Search className="w-4 h-4 mr-2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={t('advancedHistory.searchPlaceholder')}
+                    className={`w-full bg-transparent border-none focus:outline-none ${darkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+                  />
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {t('advancedHistory.filter')}
+                </h3>
+                <div className="space-y-2">
+                  <div className={`p-2 rounded-lg cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="checkbox" className="mr-2" />
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('advancedHistory.today')}</span>
+                    </label>
+                  </div>
+                  <div className={`p-2 rounded-lg cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="checkbox" className="mr-2" />
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('advancedHistory.yesterday')}</span>
+                    </label>
+                  </div>
+                  <div className={`p-2 rounded-lg cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="checkbox" className="mr-2" />
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('advancedHistory.lastWeek')}</span>
+                    </label>
+                  </div>
+                  <div className={`p-2 rounded-lg cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="checkbox" className="mr-2" />
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('advancedHistory.lastMonth')}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {t('advancedHistory.sort')}
+                </h3>
+                <div className="space-y-2">
+                  <div className={`p-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="radio" name="sort" className="mr-2" defaultChecked />
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('advancedHistory.newest')}</span>
+                    </label>
+                  </div>
+                  <div className={`p-2 rounded-lg cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                    <label className="flex items-center cursor-pointer">
+                      <input type="radio" name="sort" className="mr-2" />
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{t('advancedHistory.oldest')}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Liste des conversations */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {conversations.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {conversations.map((conv) => (
+                    <div 
+                      key={conv.id}
+                      onClick={() => {
+                        setCurrentConversationId(conv.id);
+                        setShowAdvancedHistory(false);
+                      }}
+                      className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-md ${darkMode ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center">
+                          <MessageCircle className={`w-4 h-4 mr-2 ${darkMode ? 'text-cyan-400' : 'text-cyan-500'}`} />
+                          <h3 className={`font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                            {conv.title || t('conversation.untitled')}
+                          </h3>
+                        </div>
+                        <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {new Date(conv.timestamp).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className={`text-sm truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {conv.messages && conv.messages.length > 0 
+                          ? conv.messages[conv.messages.length - 1].content.substring(0, 100) + (conv.messages[conv.messages.length - 1].content.length > 100 ? '...' : '')
+                          : t('conversation.noMessages')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <History className={`w-16 h-16 mb-4 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} />
+                  <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {t('advancedHistory.empty')}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {showOnboarding && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-70">
