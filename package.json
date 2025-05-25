@@ -1,0 +1,68 @@
+{
+  "name": "tibot",
+  "version": "1.2.1",
+  "description": "Ti'Bot - Premier IA Kréol La Rénion",
+  "author": {
+    "name": "Ti'Bot Team",
+    "email": "contact@tibot.re"
+  },
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"electron .\"",
+    "build": "vite build",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "pack": "npm run build && electron-builder --config electron-builder.json",
+    "dist": "vite build && electron-builder",
+    "dist-win": "npm run build && electron-builder --win --config electron-builder.json",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.reunion.tibot",
+    "productName": "Ti'Bot",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "vite": "^5.2.11",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "@huggingface/inference": "^3.14.0",
+    "@mistralai/mistralai": "^1.6.1",
+    "axios": "^1.6.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "uuid": "^9.0.1",
+    "electron-log": "^5.4.0",
+    "electron-updater": "^6.6.2",
+    "i18next": "^25.2.0",
+    "lucide-react": "^0.378.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^15.5.2",
+    "react-markdown": "^10.1.0",
+    "zod": "^3.25.28"
+  }
+}
