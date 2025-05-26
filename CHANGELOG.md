@@ -1,8 +1,13 @@
 # Changelog
 
-## [1.2.2] - 2025-05-25
+## [1.2.3] - 2025-05-26
 
 ### Nouvelles fonctionnalités
+- Intégration des données de transport public Car Jaune
+  - Support des données GTFS (horaires théoriques) et GTFS-RT (temps réel)
+  - Ajout de nouvelles lignes de bus (S4 et O2) avec leurs itinéraires détaillés
+  - Affichage des trajets alternatifs entre deux arrêts
+  - Visualisation des itinéraires réels sur la carte avec points intermédiaires
 - Ajout d'un sélecteur de modèle d'IA pour le mode discussion
   - Interface de sélection intuitive pour choisir entre différents modèles
   - Support initial pour Mistral 7B (fine-tuné pour comprendre le créole et le français)
@@ -10,6 +15,14 @@
   - Architecture extensible pour ajouter facilement de nouveaux modèles à l'avenir
 
 ### Améliorations
+- Refonte du mode Transport
+  - Interface utilisateur améliorée pour l'affichage des options d'itinéraires
+  - Regroupement des itinéraires par ligne de bus
+  - Indication des trajets alternatifs avec points de passage (via Le Tampon, via Saint-Benoît)
+  - Meilleure gestion des erreurs et des cas limites dans les requêtes de transport
+- Optimisation de l'affichage des résultats
+  - Adaptation des couleurs de texte au thème clair/sombre
+  - Mise en évidence des options multiples pour un même trajet
 - Ajout de raccourcis clavier pour une navigation plus rapide
   - Ctrl+N : Nouvelle conversation
   - Ctrl+1/2/3 : Basculer entre les modes (discussion, image, code)
@@ -22,6 +35,9 @@
   - Tri par date et options de filtrage améliorées
 
 ### Corrections
+- Résolution des problèmes de crash lors des requêtes d'itinéraires complexes
+- Correction de l'affichage des informations détaillées dans la fenêtre de réponse
+- Amélioration de la gestion des données manquantes ou mal formatées
 - Correction des problèmes d'interface
   - Suppression du bouton dupliqué pour ouvrir/fermer la sidebar
   - Correction de l'écart entre la sidebar et le contenu principal
@@ -29,7 +45,9 @@
 - Ajout des traductions manquantes
   - Traduction du bouton "Personnaliser" et du menu de personnalisation
   - Traduction du bouton "Raccourcis clavier"
-  - Mise à jour de la version affichée dans les paramètres (1.2.1 → 1.2.2)
+  - Mise à jour de la version affichée dans les paramètres (1.2.1 → 1.2.3)
+- Résolution de bugs mineurs d'interface
+- Optimisation des performances générales de l'application
 
 ## [1.2.1] - 2025-05-25
 
